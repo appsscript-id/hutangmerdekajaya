@@ -759,10 +759,11 @@ function drawFaktur(){
   if(F.page>pages)F.page=pages;
   const st=(F.page-1)*F.size,rows=a.slice(st,st+F.size);
   const th=(k,l,r)=>`<th class="s ${r?'r':''} ${F.sort===k?'on':''}" onclick="sortBy('${k}')">${l}<span class="ar">${F.sort===k?(F.dir==='asc'?'▲':'▼'):'▲▼'}</span></th>`;
+  const totalRow = rows.length ? `<tr style="background:#f8fafc;font-weight:bold;border-top:2px solid #cbd5e1"><td colspan="5">Total (${n} faktur)</td><td class="r mono">${num(sum(a,'dpp'))}</td><td class="r mono">${num(sum(a,'ppn'))}</td><td class="r mono">${num(sum(a,'total'))}</td><td class="r mono">${num(sum(a,'dibayar'))}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td colspan="2"></td></tr>` : '';
+
   $('fk').innerHTML=`
   <div class="tw"><table><thead><tr>${th('tgl','Tanggal')}${th('no','Nomor E-Faktur')}${th('supplier','Supplier')}${th('nota','Nota')}${th('masa','Masa Pajak')}${th('dpp','Harga Jual',1)}${th('ppn','PPN',1)}${th('total','Total',1)}${th('dibayar','Dibayar',1)}${th('sisa','Sisa',1)}${th('jt','Jatuh Tempo')}<th>Status</th></tr></thead>
-  <tbody>${rows.length?rows.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.tgl)}</td><td class="mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td>${esc(f.supplier)}</td><td>${esc(f.nota)||'<span class="sub">-</span>'}</td><td>${esc(f.masa)} ${esc(f.tahun)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td>${fd(f.jt)}</td><td>${badge(f)}</td></tr>`).join(''):`<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="5">Total (${n} faktur)</td><td class="r mono">${num(sum(a,'dpp'))}</td><td class="r mono">${num(sum(a,'ppn'))}</td><td class="r mono">${num(sum(a,'total'))}</td><td class="r mono">${num(sum(a,'dibayar'))}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td colspan="2"></td></tr></tfoot></table></div>
+  <tbody>${rows.length?rows.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.tgl)}</td><td class="mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td>${esc(f.supplier)}</td><td>${esc(f.nota)||'<span class="sub">-</span>'}</td><td>${esc(f.masa)} ${esc(f.tahun)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td>${fd(f.jt)}</td><td>${badge(f)}</td></tr>`).join('')+totalRow:`<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>`}</tbody></table></div>
   <div class="mcards">${rows.length?rows.map(f=>`<div class="mc" onclick="openDetail('${esc(f.no)}')"><div class="mc1"><b>${esc(f.supplier)}</b><span>${num(f.sisa)}</span></div><div class="mc2">${esc(f.nota)||'tanpa nota'} · ${fd(f.tgl)} · JT ${fd(f.jt)}</div><div class="mc3"><span>${badge(f)}</span><span class="sub">Total ${num(f.total)}</span></div></div>`).join(''):'<div class="empty">Tidak ada data yang cocok dengan filter.</div>'}<div class="mtot">Total sisa (${n} faktur): <b>${rp(sum(a,'sisa'))}</b></div></div>
   <div class="pg"><div>Menampilkan ${n?st+1:0}–${Math.min(st+F.size,n)} dari ${n} data</div>
    <div class="pb"><select class="inp" style="width:auto;padding:6px 8px" onchange="S.f.size=+this.value;S.f.page=1;drawFaktur()">${[10,25,50,100].map(x=>`<option ${F.size===x?'selected':''}>${x}</option>`).join('')}</select>
@@ -1184,5 +1185,3 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
 </script>
 </body>
 </html>
-html hutang.txt
-Menampilkan html hutang.txt.
