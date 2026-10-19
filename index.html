@@ -514,7 +514,7 @@ function openDetail(no){
   $('drawer').innerHTML=`
   <div class="dr-h"><h3>Detail Faktur</h3><button onclick="closeAll()">${ic('x')}</button></div>
   <div class="dr-b">
-   <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${badge(f)}${f.manual?' <span class="badge b-gray">Input Manual</span>':''}</span>${f.manual&&can.admin()?`<button class="btn danger sm" onclick="delFaktur('${esc(f.no)}')">${ic('trash')} Hapus</button>`:''}</div>
+   <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${badge(f)}${f.manual?' <span class="badge b-gray">Input Manual</span>':''}</span><span style="display:flex;gap:6px">${can.pay()?`<button class="btn sec sm" onclick="openFaktur('${esc(f.no)}')">${ic('edit')} Ubah</button>`:''}${f.manual&&can.admin()?`<button class="btn danger sm" onclick="delFaktur('${esc(f.no)}')">${ic('trash')} Hapus</button>`:''}</span></div>
    <div class="kv2">
     <div class="full"><div class="k">Supplier</div><div class="v">${esc(f.supplier)}</div></div>
     <div><div class="k">NPWP</div><div class="v">${esc(f.npwp)||'-'}</div></div>
@@ -650,21 +650,22 @@ function onSupIn(){
   const v=$('hSup').value.trim(),n=$('hNpwp');
   if(S._ks&&S._ks[v]!==undefined&&(!n.value||n.value===S._autoNpwp)){n.value=S._ks[v];S._autoNpwp=S._ks[v]}
 }
-function openFaktur(){
+function openFaktur(editNo){
   if(!can.pay())return toast('Anda tidak memiliki hak menambah hutang','err');
   S._ks=knownSuppliers();S._autoNpwp='';
+  const ed=editNo?S.map[editNo]:null;S._edit=ed?ed.no:'';
   $('modal').innerHTML=`
-  <div class="mh"><h3>Input Hutang Manual</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
+  <div class="mh"><h3>${ed?'Ubah Data Hutang':'Input Hutang Manual'}</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
   <div class="mb">
-   <div class="fg"><label>Nama Supplier</label><input class="inp" id="hSup" list="dlSup" placeholder="Ketik atau pilih supplier" oninput="onSupIn()" autocomplete="off">
+   <div class="fg"><label>Nama Supplier</label><input class="inp" id="hSup" list="dlSup" placeholder="Ketik atau pilih supplier" value="${ed?esc(ed.supplier):''}" oninput="onSupIn()" autocomplete="off">
     <datalist id="dlSup">${Object.keys(S._ks).sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
    <div class="row2">
-    <div class="fg"><label>NPWP (opsional)</label><input class="inp" id="hNpwp" inputmode="numeric"></div>
-    <div class="fg"><label>Nomor Nota</label><input class="inp" id="hNota"></div>
+    <div class="fg"><label>NPWP (opsional)</label><input class="inp" id="hNpwp" inputmode="numeric" value="${ed?esc(ed.npwp):''}"></div>
+    <div class="fg"><label>Nomor Nota</label><input class="inp" id="hNota" value="${ed?esc(ed.nota):''}"></div>
    </div>
    <div class="row2">
-    <div class="fg"><label>Nomor E-Faktur (opsional)</label><input class="inp" id="hNo" placeholder="Kosong = dibuat otomatis"></div>
-    <div class="fg"><label>Tanggal Faktur / Nota</label>${dateField('hTgl',S.data.meta.today)}</div>
+    <div class="fg"><label>Nomor E-Faktur (opsional)</label><input class="inp" id="hNo" placeholder="Kosong = dibuat otomatis" value="${ed?esc(ed.no):''}" ${ed?'readonly':''}></div>
+    <div class="fg"><label>Tanggal Faktur / Nota</label>${dateField('hTgl',ed?ed.tgl:S.data.meta.today)}</div>
    </div>
    <div class="row2">
     <div class="fg"><label>Harga Jual / DPP (Rp)</label><input class="inp" id="hDpp" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);hitungHutang()"></div>
@@ -673,7 +674,8 @@ function openFaktur(){
    <div class="infobox" id="hTot">Total hutang: <b>Rp 0</b></div>
    <div class="hint">Data disimpan sebagai baris baru di sheet “Faktur” dengan kolom Sumber = Manual. Isi PPN 0 bila tidak ada PPN.</div>
   </div>
-  <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="hBtn" onclick="submitFaktur()">${ic('check')} Simpan Hutang</button></div>`;
+  <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="hBtn" onclick="submitFaktur()">${ic('check')} ${ed?'Simpan Perubahan':'Simpan Hutang'}</button></div>`;
+  if(ed){$('hDpp').value=Math.round(ed.dpp).toLocaleString('id-ID');$('hPpn').value=Math.round(ed.ppn).toLocaleString('id-ID');hitungHutang()}
   hydrateIcons($('modal'));$('modal').classList.add('on');$('scrim').classList.add('on');
 }
 async function submitFaktur(){
@@ -681,11 +683,12 @@ async function submitFaktur(){
   if(!sup)return toast('Nama supplier wajib diisi','err');
   if(!tgl)return toast('Tanggal harus berformat dd-mm-yyyy','err');
   if(dpp<=0)return toast('Harga jual (DPP) wajib diisi','err');
-  if(no&&S.map[no])return toast('Nomor E-Faktur sudah ada','err');
+  if(!S._edit&&no&&S.map[no])return toast('Nomor E-Faktur sudah ada','err');
   const b=$('hBtn');b.disabled=true;
   try{
-    await api('addFaktur',{supplier:sup,npwp:$('hNpwp').value,nota:$('hNota').value,no:no,tgl:tgl,dpp:dpp,ppn:ppn});
-    toast('Hutang manual berhasil ditambahkan');closeModal();S.f.q='';await reload(true);
+    await api(S._edit?'updateFaktur':'addFaktur',{supplier:sup,npwp:$('hNpwp').value,nota:$('hNota').value,no:no,tgl:tgl,dpp:dpp,ppn:ppn});
+    toast(S._edit?'Perubahan berhasil disimpan':'Hutang manual berhasil ditambahkan');
+    const was=S._edit;closeModal();if(!was)S.f.q='';await reload(true);if(was)openDetail(was);
   }catch(e){toast(e.message,'err');b.disabled=false}
 }
 async function delFaktur(no){
