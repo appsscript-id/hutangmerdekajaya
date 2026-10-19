@@ -79,7 +79,7 @@ button,input,select{font-family:inherit;font-size:14px}
 .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:grid;place-items:center;font-weight:700}
 .usr .nm{font-weight:600;font-size:13px;line-height:1.1}
 .usr .rl{font-size:11px;color:var(--mut);text-transform:capitalize}
-.side{position:fixed;top:calc(60px + var(--sat));bottom:0;left:0;width:248px;background:#fff;border-right:1px solid var(--bd);padding:14px 12px;overflow:auto;z-index:30;transition:.25s}
+.side{position:fixed;top:calc(60px + var(--sat));bottom:0;left:0;width:248px;background:#fff;border-right:1px solid var(--bd);padding:14px 12px;overflow:auto;z-index:55;transition:.25s}
 .side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);font-weight:700;margin:10px 10px 8px}
 .nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#475569;text-decoration:none;font-weight:500;margin-bottom:2px;cursor:pointer;position:relative}
 .nav a:hover{background:#f5f7ff}
@@ -298,7 +298,8 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   #pg.dash .panel>.bd{padding:8px 10px}
   #pg.dash .panel>.bd.cb{min-height:0}
   #pg.dash .cw{inset:4px 4px}
-  #pg.dash .fill{max-height:none;overflow:hidden}
+  #pg.dash .fill{max-height:none;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none}
+  #pg.dash .fill::-webkit-scrollbar{display:none;width:0;height:0}
   #pg.dash .rank{gap:10px}
   #pg.dash th,#pg.dash td{padding:7px 8px;font-size:12px}
 }
@@ -360,7 +361,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 /* ====================== UTIL ====================== */
@@ -509,7 +510,7 @@ function metaBanner(){
 function dseg(b,v){
   const g=b.parentNode.nextElementSibling;g.dataset.v=v;
   [...b.parentNode.children].forEach(x=>x.classList.toggle('on',x===b));
-  setTimeout(()=>{S.charts.forEach(c=>c.resize());fitDash()},40);
+  setTimeout(()=>S.charts.forEach(c=>c.resize()),30);
 }
 function renderDashboard(){
   const fk=S.data.faktur,open=fk.filter(f=>f.sisa>=1),od=open.filter(f=>f.umur>0);
@@ -538,7 +539,7 @@ function renderDashboard(){
   <div class="blk">
    <div class="mseg"><button class="on" onclick="dseg(this,'1')">Top Supplier</button><button onclick="dseg(this,'2')">Prioritas Bayar</button></div>
    <div class="grid2b" data-v="1">
-    <div class="panel p1"><div class="hd"><h3>5 Supplier dengan Sisa Hutang Terbesar</h3><a class="btn ghost sm" onclick="go('supplier')">Lihat semua</a></div><div class="bd fill"><div class="rank" id="top5"></div></div></div>
+    <div class="panel p1"><div class="hd"><h3>10 Supplier dengan Sisa Hutang Terbesar</h3><a class="btn ghost sm" onclick="go('supplier')">Lihat semua</a></div><div class="bd fill"><div class="rank" id="top5"></div></div></div>
     <div class="panel p2"><div class="hd"><h3>Prioritas Pembayaran (Jatuh Tempo Terdekat)</h3><a class="btn ghost sm" onclick="go('faktur')">Lihat semua</a></div>
      <div class="tw fill"><table><thead><tr><th>Jatuh Tempo</th><th>Supplier</th><th class="r">Sisa</th></tr></thead><tbody id="prio"></tbody></table></div></div>
    </div>
@@ -562,30 +563,12 @@ function renderDashboard(){
    options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:lg(mob?'right':'bottom'),tooltip:{callbacks:{label:c=>c.label+': '+rp(c.parsed)}}}}}));
   // top5
   const sm={};open.forEach(f=>sm[f.supplier]=(sm[f.supplier]||0)+f.sisa);
-  const top=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,5),mx=top.length?top[0][1]:1;
+  const top=Object.entries(sm).sort((a,b)=>b[1]-a[1]).slice(0,10),mx=top.length?top[0][1]:1;
   $('top5').innerHTML=top.length?top.map(([n,v])=>`<div class="it"><div class="t"><span title="${esc(n)}">${esc(n)}</span><span>${rp0(v)}</span></div><div class="prog"><i style="width:${v/mx*100}%"></i></div></div>`).join(''):'<div class="empty">Tidak ada hutang tersisa 🎉</div>';
   // prioritas
-  const pr=[...open].sort((a,b)=>a.jt.localeCompare(b.jt)).slice(0,8);
+  const pr=[...open].sort((a,b)=>a.jt.localeCompare(b.jt)).slice(0,10);
   $('prio').innerHTML=pr.length?pr.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.jt)}<div class="sub">${f.umur>0?'Lewat '+f.umur+' hari':f.umur===0?'Hari ini':(-f.umur)+' hari lagi'}</div></td><td>${esc(f.supplier)}</td><td class="r mono"><b>${num(f.sisa)}</b></td></tr>`).join(''):'<tr><td colspan="3" class="empty">Semua faktur sudah lunas</td></tr>';
-  requestAnimationFrame(fitDash);setTimeout(fitDash,300);
 }
-
-/* ====== Dashboard HP: tampilkan hanya baris yang muat, tanpa scroll ====== */
-function fitDash(){
-  document.querySelectorAll('#top5 .it,#prio tr').forEach(e=>e.style.display='');
-  if(!window.matchMedia('(max-width:700px)').matches||S.page!=='dashboard')return;
-  [['top5',8],['prio',2]].forEach(([id,pad])=>{
-    const el=$(id),box=el&&el.closest('.fill');
-    if(!box||!box.clientHeight)return;
-    const lim=box.getBoundingClientRect().bottom-pad;
-    let hide=false;
-    [...el.children].forEach(c=>{
-      if(!hide&&c.getBoundingClientRect().bottom>lim)hide=true;
-      if(hide)c.style.display='none';
-    });
-  });
-}
-window.addEventListener('resize',()=>{if(S.page==='dashboard')fitDash()});
 
 /* ====== PWA: pasang ke HP / laptop ====== */
 let _dip=null;
