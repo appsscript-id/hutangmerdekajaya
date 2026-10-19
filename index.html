@@ -159,6 +159,14 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 .x:hover{background:#f1f5f9}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .hint{font-size:12px;color:var(--mut);margin-top:5px}
+.cbx{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #cbd5e1;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.18);max-height:230px;overflow:auto;z-index:5}
+.cbx .opt{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9}
+.cbx .opt:last-child{border:0}
+.cbx .opt:hover{background:var(--brand-l)}
+.cbx .o1{display:flex;justify-content:space-between;gap:10px}
+.cbx .o1 span{color:var(--brand);font-weight:700;font-variant-numeric:tabular-nums}
+.cbx .o2{font-size:13px}
+.cbx .o3{font-size:11.5px;color:var(--mut)}
 .infobox{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:8px}
 
 /* ===== TOAST & LOADER ===== */
@@ -526,9 +534,11 @@ function openPay(no){
   $('modal').innerHTML=`
   <div class="mh"><h3>Catat Pembayaran Hutang</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
   <div class="mb">
-   <div class="fg"><label>Nomor E-Faktur</label>
-    <input class="inp mono" id="pNo" list="dlF" placeholder="Ketik / pilih nomor faktur atau nama supplier" value="${f?esc(f.no):''}" ${f?'readonly':''} oninput="onPayNo()" autocomplete="off">
-    <datalist id="dlF">${open.map(x=>`<option value="${esc(x.no)}">${esc(x.supplier)} — sisa ${num(x.sisa)}</option>`).join('')}</datalist>
+   <div class="fg"><label>Nomor Nota (acuan pembayaran)</label>
+    <div style="position:relative">
+     <input class="inp" id="pNo" placeholder="Ketik nomor Nota, nama supplier, atau nomor e-faktur..." ${f?'readonly':''} oninput="onPaySearch()" onfocus="showPayList()" onblur="setTimeout(hidePayList,150)" autocomplete="off">
+     <div class="cbx hidden" id="pList"></div>
+    </div>
     <div class="infobox hidden" id="pInfo"></div></div>
    <div class="row2">
     <div class="fg"><label>Tanggal Bayar</label><input type="date" class="inp" id="pTgl" value="${today}"></div>
@@ -542,22 +552,46 @@ function openPay(no){
   <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="pBtn" onclick="submitPay()">${ic('check')} Simpan Pembayaran</button></div>`;
   hydrateIcons($('modal'));
   $('modal').classList.add('on');$('scrim').classList.add('on');
-  onPayNo(true);
+  S._payNo='';S._autoKet='';
+  if(f)pickPay(f.no);
 }
 function closeModal(){$('modal').classList.remove('on');if(!$('drawer').classList.contains('on'))$('scrim').classList.remove('on')}
 function fmtMoney(el){const d=el.value.replace(/\D/g,'');el.value=d?(+d).toLocaleString('id-ID'):''}
 function getMoney(){return parseInt(($('pJml').value||'').replace(/\D/g,''),10)||0}
-function onPayNo(init){
-  const f=S.map[$('pNo').value.trim()],b=$('pInfo');
-  if(!f){b.classList.add('hidden');return}
-  b.classList.remove('hidden');
-  b.innerHTML=`<b>${esc(f.supplier)}</b><br>Total ${rp(f.total)} · Dibayar ${rp(f.dibayar)} · <b>Sisa ${rp(f.sisa)}</b>`;
-  if(init===true&&!$('pJml').value){$('pJml').value=(Math.round(f.sisa)).toLocaleString('id-ID')}
+function payOptions(q){
+  q=(q||'').toLowerCase().trim();
+  return S.data.faktur.filter(x=>x.sisa>=1&&(!q||(x.nota+' '+x.no+' '+x.supplier).toLowerCase().includes(q)))
+    .sort((a,b)=>(a.nota||'').localeCompare(b.nota||'',undefined,{numeric:true})||a.tgl.localeCompare(b.tgl)).slice(0,60);
 }
-function payFull(){const f=S.map[$('pNo').value.trim()];if(!f)return toast('Pilih faktur terlebih dahulu','err');$('pJml').value=Math.round(f.sisa).toLocaleString('id-ID')}
+function drawPayList(q){
+  const l=$('pList'),a=payOptions(q);
+  l.innerHTML=a.length?a.map(x=>`<div class="opt" onmousedown="pickPay('${esc(x.no)}')"><div class="o1"><b>${esc(x.nota)||'(tanpa nota)'}</b><span>${num(x.sisa)}</span></div><div class="o2">${esc(x.supplier)}</div><div class="o3">E-Faktur ${esc(x.no)} · ${fd(x.tgl)}</div></div>`).join(''):'<div class="opt sub">Tidak ada faktur belum lunas yang cocok</div>';
+  l.classList.remove('hidden');
+}
+function showPayList(){const el=$('pNo');if(!el||el.readOnly)return;if(S._payNo)el.select();drawPayList(S._payNo?'':el.value)}
+function hidePayList(){const l=$('pList');if(l)l.classList.add('hidden')}
+function onPaySearch(){
+  const v=$('pNo').value;S._payNo='';$('pInfo').classList.add('hidden');
+  const f=S.map[v.trim()];
+  if(f&&f.sisa>=1){pickPay(f.no);return}
+  drawPayList(v);
+}
+function pickPay(no){
+  const f=S.map[no];if(!f)return;
+  S._payNo=no;
+  $('pNo').value=(f.nota||'(tanpa nota)')+' · '+f.supplier;
+  hidePayList();
+  const b=$('pInfo');b.classList.remove('hidden');
+  b.innerHTML=`<b>Nota: ${esc(f.nota)||'-'}</b> · ${esc(f.supplier)}<br>E-Faktur ${esc(f.no)} · ${fd(f.tgl)} · Jatuh tempo ${fd(f.jt)}<br>Total ${rp(f.total)} · Dibayar ${rp(f.dibayar)} · <b>Sisa ${rp(f.sisa)}</b>`;
+  $('pJml').value=Math.round(f.sisa).toLocaleString('id-ID');
+  const k=$('pKet'),auto='Pembayaran nota '+(f.nota||f.no);
+  if(!k.value||k.value===S._autoKet)k.value=auto;
+  S._autoKet=auto;
+}
+function payFull(){const f=S.map[S._payNo];if(!f)return toast('Pilih nota / faktur terlebih dahulu','err');$('pJml').value=Math.round(f.sisa).toLocaleString('id-ID')}
 async function submitPay(){
-  const no=$('pNo').value.trim(),f=S.map[no],jml=getMoney();
-  if(!f)return toast('Nomor E-Faktur tidak ditemukan','err');
+  const no=S._payNo,f=S.map[no],jml=getMoney();
+  if(!f)return toast('Pilih Nota / faktur dari daftar terlebih dahulu','err');
   if(f.sisa<1)return toast('Faktur ini sudah lunas','err');
   if(jml<=0)return toast('Jumlah pembayaran wajib diisi','err');
   if(jml>f.sisa+1)return toast('Jumlah melebihi sisa hutang ('+rp(f.sisa)+')','err');
@@ -684,13 +718,13 @@ function renderBayar(){
   <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier, nomor faktur, referensi..." value="${esc(S.pq)}" oninput="S.pq=this.value;drawBayar()"></div></div><div id="by"></div></div>`;
   drawBayar();
 }
-function bFiltered(){const q=S.pq.toLowerCase();return S.data.payments.filter(p=>!q||(p.supplier+' '+p.no+' '+p.ref+' '+p.ket+' '+p.id).toLowerCase().includes(q)).sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.id.localeCompare(a.id))}
+function bFiltered(){const q=S.pq.toLowerCase();return S.data.payments.filter(p=>!q||(p.supplier+' '+p.no+' '+p.ref+' '+p.ket+' '+p.id+' '+((S.map[p.no]||{}).nota||'')).toLowerCase().includes(q)).sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.id.localeCompare(a.id))}
 function exportBayar(){csv([['ID','Tanggal','Nomor E-Faktur','Supplier','Jumlah','Metode','Referensi','Keterangan','Dibuat Oleh']].concat(bFiltered().map(p=>[p.id,p.tgl,p.no,p.supplier,p.jumlah,p.metode,p.ref,p.ket,p.oleh])),'riwayat-pembayaran.csv')}
 function drawBayar(){
   const a=bFiltered();
-  $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.admin()?'<th></th>':''}</tr></thead>
-  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.admin()?`<td><button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button></td>`:''}</tr>`).join(''):`<tr><td colspan="10" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="7">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.admin()?2:1}"></td></tr></tfoot></table></div>`;
+  $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.admin()?'<th></th>':''}</tr></thead>
+  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.admin()?`<td><button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button></td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.admin()?2:1}"></td></tr></tfoot></table></div>`;
 }
 async function delPay(id){
   if(!confirm('Hapus pembayaran ini? Sisa hutang faktur akan bertambah kembali.'))return;
