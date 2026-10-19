@@ -422,7 +422,7 @@ function downloadPDF(){
   // 2) Bungkus dengan lebar tetap & CSS khusus PDF (tidak terpengaruh layar HP / sidebar)
   const style = document.createElement('style');
   style.textContent = `
-  #pdfwrap{position:absolute;left:-10000px;top:0;width:1100px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
+  #pdfwrap{position:static;width:1100px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
   #pdfwrap *{box-sizing:border-box}
   #pdfwrap .ph{display:block!important;margin:0 0 16px!important;padding:0 0 10px!important;border-bottom:2px solid #cbd5e1}
   #pdfwrap .ph h1{font-size:22px!important;margin:0 0 4px!important}
@@ -447,7 +447,11 @@ function downloadPDF(){
   wrap.appendChild(style);
   wrap.appendChild(clone);
   // Harus berada di dalam DOM supaya lebarnya terukur (kalau tidak, hasil PDF terpotong kiri-kanan)
-  document.body.appendChild(wrap);
+  // Pembungkus luar yang menyembunyikan; elemen yang dikirim ke html2pdf (wrap) sendiri tidak digeser
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;z-index:-1;pointer-events:none';
+  holder.appendChild(wrap);
+  document.body.appendChild(holder);
 
   const opt = {
     margin:      [12, 10, 12, 10],   // atas, kiri, bawah, kanan (mm) -> rata semua sisi
@@ -458,7 +462,7 @@ function downloadPDF(){
     pagebreak:   { mode: ['css', 'legacy'], avoid: ['tr'] }
   };
 
-  const done = () => { wrap.remove(); busy(false); };
+  const done = () => { holder.remove(); busy(false); };
   busy(true);
   html2pdf().from(wrap).set(opt).save().then(()=>{
     done();
