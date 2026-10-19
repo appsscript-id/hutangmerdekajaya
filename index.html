@@ -393,19 +393,27 @@ function downloadPDF(){
   const pg = $('pg');
   if(!pg) return toast('Area laporan tidak ditemukan','err');
   
-  // Clone element to sanitize for PDF (remove filters, search inputs, buttons, and keep only data title & table)
+  // Clone element to sanitize for PDF
   const clone = pg.cloneNode(true);
   
   // Remove non-data items like tools, buttons, pagination controls, search inputs
   const toRemove = clone.querySelectorAll('.tools, .acts, .noprint, .pg, button, select');
   toRemove.forEach(el => el.remove());
   
+  // Fix for 100 rows cutting off: remove max-height and overflow restrictions on tables/wrappers in the clone
+  clone.querySelectorAll('.tw').forEach(el => {
+    el.style.maxHeight = 'none';
+    el.style.overflow = 'visible';
+    el.style.height = 'auto';
+  });
+  
   const opt = {
-    margin:      10,
+    margin:      [10, 10, 10, 10],
     filename:    'laporan-hutang.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak:   { mode: ['css', 'legacy'] }
   };
   
   busy(true);
