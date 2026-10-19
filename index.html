@@ -399,6 +399,17 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2s
 
 
 /* ====================== PDF DOWNLOAD ====================== */
+/* Tabel khusus PDF Daftar Hutang: semua data hasil filter (bukan hanya 1 halaman), tanpa panah sortir */
+function fakturPdfTable(a){
+  const head=['Tanggal','Nomor E-Faktur','Supplier','Nota','Masa Pajak','Harga Jual','PPN','Total','Dibayar','Sisa','Jatuh Tempo','Status'];
+  const right=[5,6,7,8,9];
+  const th=head.map((h,i)=>`<th class="nw${right.includes(i)?' r':''}">${h}</th>`).join('');
+  const masa=f=>{const m=String(f.masa||'');return esc(m.length>4?m.slice(0,3):m)+' '+esc(f.tahun)};
+  const rows=a.map(f=>`<tr><td class="nw">${fd(f.tgl)}</td><td class="nw mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td class="wc">${esc(f.supplier)}</td><td class="wc">${esc(f.nota)||'-'}</td><td class="nw">${masa(f)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td class="nw">${fd(f.jt)}</td><td class="nw">${badge(f)}</td></tr>`).join('');
+  const foot=a.length?`<tfoot><tr><td colspan="5">Total (${a.length} faktur)</td><td class="r mono">${num(sum(a,'dpp'))}</td><td class="r mono">${num(sum(a,'ppn'))}</td><td class="r mono">${num(sum(a,'total'))}</td><td class="r mono">${num(sum(a,'dibayar'))}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td colspan="2"></td></tr></tfoot>`:'';
+  return `<div class="tw"><table class="fk"><thead><tr>${th}</tr></thead><tbody>${a.length?rows:'<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>'}</tbody>${foot}</table></div>`;
+}
+
 function downloadPDF(){
   const pg = $('pg');
   if(!pg) return toast('Area laporan tidak ditemukan','err');
@@ -419,6 +430,15 @@ function downloadPDF(){
     }catch(e){}
   });
 
+  // Lebar area cetak & isi tabel khusus per laporan
+  let W = 1000;
+  const h1 = clone.querySelector('h1');
+  if(h1 && h1.textContent.trim() === 'Daftar Hutang'){
+    W = 1180;
+    const fk = clone.querySelector('#fk');
+    if(fk) fk.innerHTML = fakturPdfTable(filtered());
+  }
+
   // 2) Bungkus dengan lebar tetap & CSS khusus PDF (tidak terpengaruh layar HP / sidebar)
   const style = document.createElement('style');
   style.textContent = `
@@ -437,6 +457,11 @@ function downloadPDF(){
   #pdfwrap th.r,#pdfwrap td.r{text-align:right!important;white-space:nowrap!important}
   #pdfwrap td.mono{white-space:nowrap!important}
   #pdfwrap td:last-child{white-space:nowrap!important}
+  #pdfwrap table.fk{font-size:11px!important}
+  #pdfwrap table.fk th,#pdfwrap table.fk td{padding:8px 6px!important}
+  #pdfwrap table.fk th.nw,#pdfwrap table.fk td.nw{white-space:nowrap!important}
+  #pdfwrap table.fk td.wc{white-space:normal!important;min-width:120px}
+  #pdfwrap .badge{white-space:nowrap!important}
   #pdfwrap tfoot td{background:#f8fafc!important;font-weight:700!important;border-top:2px solid #94a3b8!important}
   #pdfwrap tr{break-inside:avoid;page-break-inside:avoid}
   #pdfwrap .kpis{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:10px!important;margin-bottom:14px!important}
@@ -445,6 +470,7 @@ function downloadPDF(){
   `;
   const wrap = document.createElement('div');
   wrap.id = 'pdfwrap';
+  wrap.style.width = W + 'px';
   wrap.appendChild(style);
   wrap.appendChild(clone);
   // Harus berada di dalam DOM supaya lebarnya terukur (kalau tidak, hasil PDF terpotong kiri-kanan)
