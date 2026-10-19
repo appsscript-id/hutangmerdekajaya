@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hutang">
@@ -363,7 +363,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 /* ====================== UTIL ====================== */
@@ -624,7 +624,7 @@ async function showInstallHelp(){
     (icons.length?icons.map(x=>ok(x.ok)+' Ikon '+esc(x.src)+(x.ok?' ('+x.w+'×'+x.h+')':' — TIDAK DITEMUKAN')).join('<br>'):'❌ Daftar ikon di manifest kosong')+'<br>'+
     ok(reg)+' Service worker (sw.js) terdaftar';
   const hasil=iconBad
-    ?'<b>Penyebab:</b> file ikon belum ter-upload atau foldernya salah. Buat folder bernama <b>icons</b> (huruf kecil semua) sejajar dengan index.html, isi dengan 4 file PNG (icon-192, icon-512, icon-maskable-512, apple-touch-icon). Chrome menolak memasang aplikasi tanpa ikon.'
+    ?'<b>Penyebab:</b> file ikon belum ter-upload atau foldernya salah. Upload 4 file PNG (icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png) langsung di folder yang sama dengan index.html, tanpa subfolder. Chrome menolak memasang aplikasi tanpa ikon.'
     :(allOk
       ?'<b>Semua file sudah benar</b>, tetapi Chrome di HP ini belum mau memasang. Coba berurutan: (1) Chrome ⋮ → Info → <b>Setelan situs</b> → <b>Hapus data &amp; reset izin</b>, tutup tab, buka lagi dan gunakan aplikasi beberapa saat; (2) pastikan <b>Google Play Services</b> aktif dan Chrome versi terbaru (pemasangan di Android memerlukannya); (3) jika menu hanya menampilkan <b>Tambahkan ke Layar utama</b>, pilih itu sebagai gantinya.'
       :'Perbaiki tanda ❌ di atas, lalu muat ulang halaman dan coba lagi.');
