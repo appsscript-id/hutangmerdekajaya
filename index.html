@@ -419,18 +419,10 @@ function downloadPDF(){
     }catch(e){}
   });
 
-  // Khusus Rekap Supplier: kolom paling kanan (JT Terdekat) tidak dicetak ke PDF
-  const h1 = clone.querySelector('h1');
-  if(h1 && h1.textContent.trim() === 'Rekap Supplier'){
-    clone.querySelectorAll('tr').forEach(tr=>{
-      if(tr.children.length > 1) tr.lastElementChild.remove();
-    });
-  }
-
   // 2) Bungkus dengan lebar tetap & CSS khusus PDF (tidak terpengaruh layar HP / sidebar)
   const style = document.createElement('style');
   style.textContent = `
-  #pdfwrap{position:static;width:960px;box-sizing:border-box;padding:24px 28px;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
+  #pdfwrap{position:static;width:960px;box-sizing:border-box;padding:0;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
   #pdfwrap *{box-sizing:border-box}
   #pdfwrap .ph{display:block!important;margin:0 0 16px!important;padding:0 0 10px!important;border-bottom:2px solid #cbd5e1}
   #pdfwrap .ph h1{font-size:22px!important;margin:0 0 4px!important}
@@ -439,8 +431,8 @@ function downloadPDF(){
   #pdfwrap .panel>.hd{padding:10px 14px!important}
   #pdfwrap .panel>.bd{padding:12px 14px!important}
   #pdfwrap .tw{display:block!important;max-height:none!important;height:auto!important;overflow:visible!important;width:100%!important}
-  #pdfwrap table{width:100%!important;table-layout:auto!important;border-collapse:collapse!important;font-size:11px!important}
-  #pdfwrap th,#pdfwrap td{position:static!important;padding:7px 8px!important;white-space:normal!important;word-break:break-word;text-align:left;vertical-align:middle!important;border-bottom:1px solid #e2e8f0!important}
+  #pdfwrap table{width:100%!important;table-layout:auto!important;border-collapse:collapse!important;font-size:10.5px!important}
+  #pdfwrap th,#pdfwrap td{position:static!important;padding:7px 6px!important;white-space:normal!important;word-break:break-word;text-align:left;vertical-align:middle!important;border-bottom:1px solid #e2e8f0!important}
   #pdfwrap th{background:#f1f5f9!important;color:#334155!important;font-size:10px!important;text-transform:uppercase;letter-spacing:.03em}
   #pdfwrap th.r,#pdfwrap td.r{text-align:right!important;white-space:nowrap!important}
   #pdfwrap td.mono{white-space:nowrap!important}
@@ -462,7 +454,7 @@ function downloadPDF(){
   document.body.appendChild(holder);
 
   const opt = {
-    margin:      [12, 10, 12, 10],   // atas, kiri, bawah, kanan (mm) -> rata semua sisi
+    margin:      [10, 10, 10, 10],   // atas, kiri, bawah, kanan (mm) -> sama di semua sisi
     filename:    'laporan-hutang.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, x: 0, y: 0, backgroundColor: '#ffffff' },
