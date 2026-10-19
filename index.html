@@ -667,7 +667,7 @@ function renderFaktur(){
   const F=S.f;
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Daftar Hutang</h1><div class="sub">Faktur pajak masukan dari sheet “Faktur”</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportFaktur()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openFaktur()">${ic('plus')} Input Hutang Manual</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportFaktur()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openFaktur()">${ic('plus')} Input Hutang Manual</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
   ${metaBanner()}
   <div class="panel">
    <div class="tools">
@@ -942,7 +942,7 @@ function supplierRows(){
 function renderSupplier(){
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Rekap Supplier</h1><div class="sub">Ringkasan hutang per supplier</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportSupplier()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button></div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportSupplier()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button></div></div>
   <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier / NPWP..." value="${esc(S.sq)}" oninput="S.sq=this.value;drawSupplier()"></div></div><div id="sp"></div></div>`;
   drawSupplier();
 }
@@ -1065,7 +1065,7 @@ function renderAging(){
   const tb=[0,1,2,3,4].map(i=>rows.reduce((s,r)=>s+r.b[i],0)),tt=tb.reduce((a,b)=>a+b,0);
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Umur Hutang (Aging)</h1><div class="sub">Sisa hutang dikelompokkan berdasarkan keterlambatan dari jatuh tempo (sesuai termin tiap supplier)</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportAging()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button></div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportAging()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button></div></div>
   <div class="kpis">${BK.map((l,i)=>kpi(['c-green','c-amber','c-amber','c-red','c-red'][i],'clock',l,rp0(tb[i]),(tt?Math.round(tb[i]/tt*100):0)+'% dari sisa hutang')).join('')}</div>
   <div class="panel"><div class="hd"><h3>Matriks Aging per Supplier</h3></div>
   <div class="tw"><table><thead><tr><th>Supplier</th>${BK.map(b=>`<th class="r">${b}</th>`).join('')}<th class="r">Total Sisa</th></tr></thead>
