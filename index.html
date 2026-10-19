@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--brand:#4f46e5;--brand-d:#4338ca;--brand-l:#eef2ff;--acc:#4f46e5;--bg:#f4f6fb;--card:#fff;--tx:#0f172a;--mut:#64748b;--bd:#e5e9f2;--ok:#059669;--warn:#d97706;--bad:#e11d48;--r:14px;--sh:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05)}
 *{box-sizing:border-box}
@@ -385,6 +386,28 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
    ====================================================== */
 const APP_VERSION = '1.0.4';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
+
+
+/* ====================== PDF DOWNLOAD ====================== */
+function downloadPDF(){
+  const element = $('pg');
+  if(!element) return toast('Area laporan tidak ditemukan','err');
+  const opt = {
+    margin:      10,
+    filename:    'laporan-hutang.pdf',
+    image:       { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  };
+  busy(true);
+  html2pdf().from(element).set(opt).save().then(()=>{
+    busy(false);
+    toast('PDF berhasil diunduh');
+  }).catch(e=>{
+    busy(false);
+    toast('Gagal mengunduh PDF: ' + (e.message || e), 'err');
+  });
+}
 
 /* ====================== UTIL ====================== */
 const MON=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
