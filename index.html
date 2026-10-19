@@ -257,6 +257,8 @@ const BC=['#0b4a8f','#f59e0b','#f97316','#ef4444','#991b1b'];
 
 const P={
  home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+ book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+ edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
  card:'<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
@@ -319,6 +321,7 @@ async function logout(){try{await api('logout')}catch(e){}clearSession();S.data=
 const PAGES={
   dashboard:{t:'Beranda',i:'home',r:()=>renderDashboard()},
   faktur:{t:'Daftar Hutang',i:'file',r:()=>renderFaktur()},
+  master:{t:'Daftar Supplier',i:'book',r:()=>renderMaster()},
   supplier:{t:'Rekap Supplier',i:'users',r:()=>renderSupplier()},
   bayar:{t:'Riwayat Pembayaran',i:'card',r:()=>renderBayar()},
   aging:{t:'Umur Hutang (Aging)',i:'clock',r:()=>renderAging()},
@@ -392,7 +395,7 @@ function renderDashboard(){
    ${kpi('c-blue','file','Total Tagihan',rp(tot),fk.length+' faktur')}
    ${kpi('c-green','check','Telah Dibayar',rp(paid),pct+'% dari total tagihan')}
    ${kpi('c-amber','money','Sisa Hutang',rp(sisa),open.length+' faktur belum lunas')}
-   ${kpi('c-red','alert','Lewat Jatuh Tempo',rp(sum(od,'sisa')),od.length+' faktur · termin '+S.data.settings.termin_default+' hari')}
+   ${kpi('c-red','alert','Lewat Jatuh Tempo',rp(sum(od,'sisa')),od.length+' faktur')}
    ${kpi('c-gray','clock','Jatuh Tempo ≤ 7 Hari',rp(sum(dueSoon,'sisa')),dueSoon.length+' faktur')}
   </div>
   <div class="grid2">
@@ -496,7 +499,7 @@ function openDetail(no){
     <div class="full"><div class="k">Nomor E-Faktur</div><div class="v">${esc(f.no)}</div></div>
     <div><div class="k">Tanggal Faktur</div><div class="v">${fd(f.tgl)}</div></div>
     <div><div class="k">Masa Pajak</div><div class="v">${esc(f.masa)} ${esc(f.tahun)}</div></div>
-    <div><div class="k">Jatuh Tempo</div><div class="v">${fd(f.jt)}</div></div>
+    <div><div class="k">Jatuh Tempo</div><div class="v">${fd(f.jt)} <span class="sub">(termin ${f.termin} hr)</span></div></div>
     <div><div class="k">Umur</div><div class="v">${f.sisa<1?'-':f.umur>0?'Lewat '+f.umur+' hari':(-f.umur)+' hari lagi'}</div></div>
    </div>
    <div class="sumbox">
@@ -595,6 +598,84 @@ function drawSupplier(){
   <tfoot><tr><td colspan="2">Total (${a.length} supplier)</td><td class="r">${sum(a,'c')}</td><td class="r">${sum(a,'open')}</td><td class="r mono">${num(sum(a,'t'))}</td><td class="r mono">${num(sum(a,'p'))}</td><td class="r mono">${num(sum(a,'s'))}</td><td class="r mono">${num(sum(a,'od'))}</td><td></td></tr></tfoot></table></div>`;
 }
 
+/* ====================== DAFTAR SUPPLIER (MASTER) ====================== */
+function supMatch(s,f){return (s.npwp&&f.npwp===s.npwp)||(s.nama&&f.supplier.toLowerCase()===s.nama.toLowerCase())}
+function masterRows(){
+  const fk=S.data.faktur;
+  return S.data.suppliers.map((s,i)=>{
+    const a=fk.filter(f=>supMatch(s,f));
+    return Object.assign({},s,{i:i,c:a.length,open:a.filter(f=>f.sisa>=1).length,sisa:sum(a,'sisa')});
+  });
+}
+function unsyncedCount(){
+  const seen=new Set();
+  S.data.faktur.forEach(f=>{if(!S.data.suppliers.some(s=>supMatch(s,f)))seen.add(f.npwp||f.supplier.toLowerCase())});
+  return seen.size;
+}
+function renderMaster(){
+  const un=unsyncedCount();
+  $('pg').innerHTML=`
+  <div class="ph"><div><h1>Daftar Supplier</h1><div class="sub">Data master dari sheet “Supplier” — termin, kontak, dan rekening</div></div>
+   <div class="acts noprint">${can.pay()?`<button class="btn sec" onclick="syncSup()">${ic('refresh')} Sinkron dari Faktur</button><button class="btn acc" onclick="openSup(-1)">${ic('plus')} Tambah Supplier</button>`:''}</div></div>
+  ${un?`<div class="banner">${ic('alert')}<div>${un} supplier di sheet Faktur belum ada di Daftar Supplier. Klik <b>Sinkron dari Faktur</b> untuk menambahkannya otomatis.</div></div>`:''}
+  <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari nama, NPWP, kontak, bank..." value="${esc(S.mq||'')}" oninput="S.mq=this.value;drawMaster()"></div></div><div id="ms"></div></div>`;
+  drawMaster();
+}
+function drawMaster(){
+  const q=(S.mq||'').toLowerCase();
+  const a=masterRows().filter(s=>!q||(s.nama+' '+s.npwp+' '+s.kontak+' '+s.telp+' '+s.bank+' '+s.rek).toLowerCase().includes(q)).sort((x,y)=>x.nama.localeCompare(y.nama));
+  const dt=S.data.settings.termin_default;
+  $('ms').innerHTML=`<div class="tw"><table><thead><tr><th>Supplier</th><th>NPWP</th><th class="r">Termin</th><th>Kontak</th><th>Telepon</th><th>Bank / No. Rekening</th><th class="r">Faktur</th><th class="r">Sisa Hutang</th><th class="noprint"></th></tr></thead>
+  <tbody>${a.length?a.map(s=>`<tr><td><b>${esc(s.nama)||'-'}</b>${s.catatan?`<div class="sub">${esc(s.catatan)}</div>`:''}</td><td class="mono">${esc(s.npwp)||'-'}</td><td class="r">${s.termin===null?`<span class="sub">Default (${dt})</span>`:s.termin+' hari'}</td><td>${esc(s.kontak)||'-'}</td><td>${esc(s.telp)||'-'}</td><td>${s.bank||s.rek?esc(s.bank)+' '+esc(s.rek):'-'}</td><td class="r">${s.c}</td><td class="r mono"><b>${num(s.sisa)}</b></td>
+   <td class="noprint" style="text-align:right"><button class="btn ghost sm" title="Lihat faktur" onclick="toSupplier(S.data.suppliers[${s.i}].nama)">${ic('file')}</button>${can.pay()?`<button class="btn ghost sm" title="Ubah" onclick="openSup(${s.i})">${ic('edit')}</button>`:''}${can.admin()?`<button class="btn ghost sm" title="Hapus" style="color:var(--bad)" onclick="delSup(${s.i})">${ic('trash')}</button>`:''}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">Belum ada supplier. Klik “Sinkron dari Faktur” atau “Tambah Supplier”.</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="6">Total (${a.length} supplier)</td><td class="r">${sum(a,'c')}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td class="noprint"></td></tr></tfoot></table></div>`;
+}
+function openSup(i){
+  if(!can.pay())return toast('Anda tidak memiliki hak mengubah supplier','err');
+  const baru=i<0,s=baru?{npwp:'',nama:'',termin:null,kontak:'',telp:'',bank:'',rek:'',catatan:''}:S.data.suppliers[i];
+  S._supNew=baru;
+  $('modal').innerHTML=`
+  <div class="mh"><h3>${baru?'Tambah':'Ubah'} Supplier</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
+  <div class="mb">
+   <div class="fg"><label>Nama Supplier</label><input class="inp" id="mNama" value="${esc(s.nama)}" ${baru?'':'readonly'}></div>
+   <div class="row2">
+    <div class="fg"><label>NPWP</label><input class="inp" id="mNpwp" value="${esc(s.npwp)}" ${baru?'':'readonly'}></div>
+    <div class="fg"><label>Termin Bayar (hari)</label><input class="inp" id="mTermin" type="number" min="0" max="365" placeholder="Kosong = default ${S.data.settings.termin_default}" value="${s.termin===null?'':s.termin}"></div>
+   </div>
+   <div class="row2">
+    <div class="fg"><label>Nama Kontak</label><input class="inp" id="mKontak" value="${esc(s.kontak)}"></div>
+    <div class="fg"><label>Telepon</label><input class="inp" id="mTelp" value="${esc(s.telp)}"></div>
+   </div>
+   <div class="row2">
+    <div class="fg"><label>Bank</label><input class="inp" id="mBank" value="${esc(s.bank)}"></div>
+    <div class="fg"><label>No. Rekening</label><input class="inp" id="mRek" value="${esc(s.rek)}"></div>
+   </div>
+   <div class="fg" style="margin-bottom:0"><label>Catatan</label><input class="inp" id="mCat" value="${esc(s.catatan)}">
+    <div class="hint">Termin supplier dipakai untuk menghitung jatuh tempo semua fakturnya.</div></div>
+  </div>
+  <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="mBtn" onclick="saveSup()">${ic('check')} Simpan</button></div>`;
+  hydrateIcons($('modal'));$('modal').classList.add('on');$('scrim').classList.add('on');
+}
+async function saveSup(){
+  const b=$('mBtn');b.disabled=true;
+  try{
+    await api('saveSupplier',{baru:S._supNew,nama:$('mNama').value,npwp:$('mNpwp').value,termin:$('mTermin').value,kontak:$('mKontak').value,telp:$('mTelp').value,bank:$('mBank').value,rek:$('mRek').value,catatan:$('mCat').value});
+    toast('Supplier disimpan');closeModal();await reload(true);
+  }catch(e){toast(e.message,'err');b.disabled=false}
+}
+async function delSup(i){
+  const s=S.data.suppliers[i];
+  if(!confirm('Hapus supplier "'+s.nama+'" dari daftar? Data faktur tidak ikut terhapus.'))return;
+  busy(true);
+  try{await api('deleteSupplier',{npwp:s.npwp,nama:s.nama});toast('Supplier dihapus');await reload(true)}catch(e){toast(e.message,'err')}
+  busy(false);
+}
+async function syncSup(){
+  busy(true);
+  try{const j=await api('syncSupplier');toast(j.added?j.added+' supplier baru ditambahkan dari Faktur':'Semua supplier sudah terdaftar');await reload(true)}catch(e){toast(e.message,'err')}
+  busy(false);
+}
+
 /* ====================== RIWAYAT PEMBAYARAN ====================== */
 function renderBayar(){
   $('pg').innerHTML=`
@@ -625,7 +706,7 @@ function renderAging(){
   const rows=Object.values(m).sort((a,b)=>b.t-a.t);
   const tb=[0,1,2,3,4].map(i=>rows.reduce((s,r)=>s+r.b[i],0)),tt=tb.reduce((a,b)=>a+b,0);
   $('pg').innerHTML=`
-  <div class="ph"><div><h1>Umur Hutang (Aging)</h1><div class="sub">Sisa hutang dikelompokkan berdasarkan keterlambatan dari jatuh tempo (termin ${S.data.settings.termin_default} hari)</div></div>
+  <div class="ph"><div><h1>Umur Hutang (Aging)</h1><div class="sub">Sisa hutang dikelompokkan berdasarkan keterlambatan dari jatuh tempo (sesuai termin tiap supplier)</div></div>
    <div class="acts noprint"><button class="btn sec" onclick="exportAging()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button></div></div>
   <div class="kpis">${BK.map((l,i)=>kpi(['c-blue','c-amber','c-amber','c-red','c-red'][i],'clock',l,rp(tb[i]),(tt?Math.round(tb[i]/tt*100):0)+'% dari sisa hutang')).join('')}</div>
   <div class="panel"><div class="hd"><h3>Matriks Aging per Supplier</h3></div>
@@ -645,7 +726,7 @@ function renderSet(){
    <div class="panel"><div class="hd"><h3>Parameter Aplikasi</h3></div><div class="bd">
     <div class="fg"><label>Nama Perusahaan</label><input class="inp" id="sNm" value="${esc(st.nama_perusahaan)}" ${can.admin()?'':'disabled'}></div>
     <div class="fg"><label>Termin Pembayaran Default (hari)</label><input class="inp" id="sTr" type="number" min="0" max="365" value="${st.termin_default}" ${can.admin()?'':'disabled'}>
-     <div class="hint">Jatuh tempo = Tanggal Faktur + termin. Dipakai untuk semua faktur karena data e-Faktur tidak memuat jatuh tempo.</div></div>
+     <div class="hint">Jatuh tempo = Tanggal Faktur + termin. Data e-Faktur tidak memuat jatuh tempo, jadi dipakai termin ini. Supplier yang punya termin sendiri di menu Daftar Supplier memakai termin tersebut.</div></div>
     ${can.admin()?`<button class="btn" onclick="saveSet()">${ic('check')} Simpan Pengaturan</button>`:'<div class="sub">Hanya admin yang dapat mengubah parameter.</div>'}
    </div></div>
    <div class="panel"><div class="hd"><h3>Ubah Password</h3></div><div class="bd">
