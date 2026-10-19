@@ -419,10 +419,18 @@ function downloadPDF(){
     }catch(e){}
   });
 
+  // Khusus Rekap Supplier: kolom paling kanan (JT Terdekat) tidak dicetak ke PDF
+  const h1 = clone.querySelector('h1');
+  if(h1 && h1.textContent.trim() === 'Rekap Supplier'){
+    clone.querySelectorAll('tr').forEach(tr=>{
+      if(tr.children.length > 1) tr.lastElementChild.remove();
+    });
+  }
+
   // 2) Bungkus dengan lebar tetap & CSS khusus PDF (tidak terpengaruh layar HP / sidebar)
   const style = document.createElement('style');
   style.textContent = `
-  #pdfwrap{position:static;width:1100px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
+  #pdfwrap{position:static;width:960px;box-sizing:border-box;padding:24px 28px;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
   #pdfwrap *{box-sizing:border-box}
   #pdfwrap .ph{display:block!important;margin:0 0 16px!important;padding:0 0 10px!important;border-bottom:2px solid #cbd5e1}
   #pdfwrap .ph h1{font-size:22px!important;margin:0 0 4px!important}
@@ -457,7 +465,7 @@ function downloadPDF(){
     margin:      [12, 10, 12, 10],   // atas, kiri, bawah, kanan (mm) -> rata semua sisi
     filename:    'laporan-hutang.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1100, backgroundColor: '#ffffff' },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, x: 0, y: 0, backgroundColor: '#ffffff' },
     jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
     pagebreak:   { mode: ['css', 'legacy'], avoid: ['tr'] }
   };
