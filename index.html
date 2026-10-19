@@ -402,47 +402,69 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2s
 function downloadPDF(){
   const pg = $('pg');
   if(!pg) return toast('Area laporan tidak ditemukan','err');
-  
-  // Clone element to sanitize for PDF
+
+  // 1) Salin konten laporan
   const clone = pg.cloneNode(true);
-  
-  // Remove non-data items like tools, buttons, pagination controls, search inputs
-  const toRemove = clone.querySelectorAll('.tools, .acts, .noprint, .pg, button, select');
-  toRemove.forEach(el => el.remove());
-  
-  // Fix for 100 rows cutting off: remove max-height and overflow restrictions on tables/wrappers in the clone
-  clone.querySelectorAll('.tw').forEach(el => {
-    el.style.maxHeight = 'none';
-    el.style.overflow = 'visible';
-    el.style.height = 'auto';
-  });
-  
-  // Ensure rows never break inside pages and tfoot appears cleanly at the end
-  clone.querySelectorAll('tr').forEach(tr => {
-    tr.style.pageBreakInside = 'avoid';
-    tr.style.breakInside = 'avoid';
-  });
-  clone.querySelectorAll('tfoot td').forEach(td => {
-    td.style.backgroundColor = '#f8fafc';
-    td.style.fontWeight = 'bold';
-    td.style.borderTop = '2px solid #cbd5e1';
+  clone.querySelectorAll('.tools, .acts, .noprint, .pg, .mcards, button, select, input').forEach(el => el.remove());
+  clone.querySelectorAll('[onclick]').forEach(el => el.removeAttribute('onclick'));
+
+  // Canvas (grafik dashboard) tidak ikut tersalin oleh cloneNode -> ganti dengan gambar
+  const srcCv = pg.querySelectorAll('canvas'), dstCv = clone.querySelectorAll('canvas');
+  dstCv.forEach((c,i)=>{
+    try{
+      const img = new Image();
+      img.src = srcCv[i].toDataURL('image/png');
+      img.style.cssText = 'max-width:100%;height:auto;display:block';
+      c.replaceWith(img);
+    }catch(e){}
   });
 
+  // 2) Bungkus dengan lebar tetap & CSS khusus PDF (tidak terpengaruh layar HP / sidebar)
+  const style = document.createElement('style');
+  style.textContent = `
+  #pdfwrap{position:absolute;left:-10000px;top:0;width:1100px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#0f172a;font-family:inherit;font-size:12px;line-height:1.45;text-align:left}
+  #pdfwrap *{box-sizing:border-box}
+  #pdfwrap .ph{display:block!important;margin:0 0 16px!important;padding:0 0 10px!important;border-bottom:2px solid #cbd5e1}
+  #pdfwrap .ph h1{font-size:22px!important;margin:0 0 4px!important}
+  #pdfwrap .ph .sub{font-size:12px!important;white-space:normal!important;color:#64748b}
+  #pdfwrap .panel{box-shadow:none!important;border:1px solid #cbd5e1!important;border-radius:8px!important;overflow:visible!important;margin:0 0 14px!important;width:100%!important}
+  #pdfwrap .panel>.hd{padding:10px 14px!important}
+  #pdfwrap .panel>.bd{padding:12px 14px!important}
+  #pdfwrap .tw{display:block!important;max-height:none!important;height:auto!important;overflow:visible!important;width:100%!important}
+  #pdfwrap table{width:100%!important;table-layout:auto!important;border-collapse:collapse!important;font-size:11px!important}
+  #pdfwrap th,#pdfwrap td{position:static!important;padding:7px 8px!important;white-space:normal!important;word-break:break-word;text-align:left;vertical-align:middle!important;border-bottom:1px solid #e2e8f0!important}
+  #pdfwrap th{background:#f1f5f9!important;color:#334155!important;font-size:10px!important;text-transform:uppercase;letter-spacing:.03em}
+  #pdfwrap th.r,#pdfwrap td.r{text-align:right!important;white-space:nowrap!important}
+  #pdfwrap td.mono{white-space:nowrap!important}
+  #pdfwrap tfoot td{background:#f8fafc!important;font-weight:700!important;border-top:2px solid #94a3b8!important}
+  #pdfwrap tr{break-inside:avoid;page-break-inside:avoid}
+  #pdfwrap .kpis{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:10px!important;margin-bottom:14px!important}
+  #pdfwrap .grid2,#pdfwrap .grid2b{display:block!important}
+  #pdfwrap .grid2>*,#pdfwrap .grid2b>*{margin-bottom:14px!important}
+  `;
+  const wrap = document.createElement('div');
+  wrap.id = 'pdfwrap';
+  wrap.appendChild(style);
+  wrap.appendChild(clone);
+  // Harus berada di dalam DOM supaya lebarnya terukur (kalau tidak, hasil PDF terpotong kiri-kanan)
+  document.body.appendChild(wrap);
+
   const opt = {
-    margin:      [10, 10, 10, 10],
+    margin:      [12, 10, 12, 10],   // atas, kiri, bawah, kanan (mm) -> rata semua sisi
     filename:    'laporan-hutang.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1100, backgroundColor: '#ffffff' },
     jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
-    pagebreak:   { mode: ['avoid-all', 'css', 'legacy'], avoid: ['tr', '.panel'] }
+    pagebreak:   { mode: ['css', 'legacy'], avoid: ['tr'] }
   };
-  
+
+  const done = () => { wrap.remove(); busy(false); };
   busy(true);
-  html2pdf().from(clone).set(opt).save().then(()=>{
-    busy(false);
+  html2pdf().from(wrap).set(opt).save().then(()=>{
+    done();
     toast('PDF data berhasil diunduh');
   }).catch(e=>{
-    busy(false);
+    done();
     toast('Gagal mengunduh PDF: ' + (e.message || e), 'err');
   });
 }
