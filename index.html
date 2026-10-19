@@ -360,6 +360,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
+const APP_VERSION = '1.0.0';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 /* ====================== UTIL ====================== */
@@ -586,11 +587,49 @@ function fitDash(){
 }
 window.addEventListener('resize',()=>{if(S.page==='dashboard')fitDash()});
 
-/* ====== PWA: pasang ke HP ====== */
+/* ====== PWA: pasang ke HP / laptop ====== */
 let _dip=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;$('instBtn').classList.remove('hidden')});
-window.addEventListener('appinstalled',()=>{_dip=null;$('instBtn').classList.add('hidden');toast('Aplikasi berhasil dipasang')});
-async function installApp(){if(!_dip)return;_dip.prompt();try{await _dip.userChoice}catch(e){}_dip=null;$('instBtn').classList.add('hidden')}
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+function updateInstUI(){
+  const b=$('instBtn');if(b)b.classList.toggle('hidden',!_dip||isStandalone());
+  const s=$('instStat'),sb=$('instSet');if(!s)return;
+  if(isStandalone()){s.textContent='Aplikasi sudah terpasang dan sedang dibuka sebagai aplikasi.';if(sb)sb.disabled=true}
+  else if(_dip)s.textContent='Siap dipasang. Klik tombol di bawah, lalu pilih Pasang/Instal.';
+  else s.textContent='Pemasangan otomatis belum tersedia di browser ini. Klik tombol di bawah untuk melihat petunjuk manual.';
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;updateInstUI()});
+window.addEventListener('appinstalled',()=>{_dip=null;updateInstUI();toast('Aplikasi berhasil dipasang')});
+async function installApp(){
+  if(isStandalone())return toast('Aplikasi sudah terpasang');
+  if(_dip){const d=_dip;_dip=null;d.prompt();try{await d.userChoice}catch(e){}updateInstUI();return}
+  showInstallHelp();
+}
+async function showInstallHelp(){
+  const ua=navigator.userAgent;
+  const ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const and=/android/i.test(ua);
+  const inapp=/FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)/i.test(ua);
+  let steps;
+  if(ios)steps='<b>iPhone / iPad</b><ol><li>Buka halaman ini di <b>Safari</b> (bukan Chrome atau aplikasi lain).</li><li>Ketuk tombol <b>Bagikan</b> (kotak dengan panah ke atas).</li><li>Pilih <b>Tambah ke Layar Utama</b>, lalu ketuk <b>Tambah</b>.</li></ol>';
+  else if(and)steps='<b>Android</b><ol><li>Buka halaman ini di <b>Chrome</b>.</li><li>Ketuk menu <b>⋮</b> di pojok kanan atas.</li><li>Pilih <b>Instal aplikasi</b> (atau <b>Tambahkan ke Layar utama</b>), lalu ketuk <b>Instal</b>.</li></ol>';
+  else steps='<b>Laptop / PC</b><ol><li>Buka halaman ini di <b>Chrome</b> atau <b>Edge</b>.</li><li>Klik ikon <b>Instal</b> (monitor dengan panah) di ujung kanan kolom alamat.</li><li>Atau lewat menu: Chrome → <b>⋮ → Transmisikan, simpan, dan bagikan → Instal halaman sebagai aplikasi</b>; Edge → <b>⋯ → Aplikasi → Instal situs ini sebagai aplikasi</b>.</li></ol><div class="sub">Firefox tidak mendukung pemasangan aplikasi web di laptop.</div>';
+  // diagnosa singkat
+  const ok=v=>v?'✅':'❌';
+  const https=location.protocol==='https:'||location.hostname==='localhost';
+  let sw=false,mf=false;
+  try{sw=!!(navigator.serviceWorker&&await navigator.serviceWorker.getRegistration())}catch(e){}
+  try{mf=(await fetch('manifest.json',{cache:'no-store'})).ok}catch(e){}
+  $('modal').innerHTML=`
+  <div class="mh"><h3>Cara Memasang Aplikasi</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
+  <div class="mb">
+   ${inapp?'<div class="banner">'+ic('alert')+'<div>Anda membuka lewat browser di dalam aplikasi lain (WhatsApp/Instagram/dll). Buka tautan ini di Chrome atau Safari agar bisa dipasang.</div></div>':''}
+   <div class="note">${steps}</div>
+   <div class="infobox"><b>Pemeriksaan</b><br>${ok(https)} Dibuka lewat HTTPS<br>${ok(mf)} File manifest.json ditemukan<br>${ok(sw)} Service worker (sw.js) aktif
+   <div class="sub" style="margin-top:6px">Jika ada tanda ❌, pastikan manifest.json, sw.js, dan folder icons sudah di-upload ke folder yang sama dengan index.html, lalu muat ulang halaman.</div></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeModal()">Tutup</button></div>`;
+  $('modal').classList.add('on');$('scrim').classList.add('on');
+}
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
@@ -1026,10 +1065,11 @@ function renderSet(){
     <button class="btn" onclick="savePw()">Ubah Password</button>
    </div></div>
   </div>
-  <div class="panel"><div class="hd"><h3>Pasang di HP</h3></div><div class="bd"><div class="note">
-   <b>Android (Chrome):</b> ketuk ikon unduh di header, atau menu ⋮ → <b>Instal aplikasi</b>.<br>
-   <b>iPhone (Safari):</b> ketuk tombol Bagikan → <b>Tambah ke Layar Utama</b>.
-  </div></div></div>
+  <div class="panel"><div class="hd"><h3>Pasang Aplikasi</h3></div><div class="bd">
+   <div class="sub" id="instStat" style="margin-bottom:12px"></div>
+   <button class="btn acc" id="instSet" onclick="installApp()">${ic('download')} Pasang Aplikasi</button>
+   <div class="hint">Bisa dipasang di Android, iPhone, dan laptop agar dibuka seperti aplikasi biasa dari layar utama.</div>
+  </div></div>
   <div class="panel"><div class="hd"><h3>Cara Memperbarui Data</h3></div><div class="bd"><div class="note">
    Data hutang dibaca langsung dari Google Spreadsheet:
    <ol>
@@ -1038,7 +1078,9 @@ function renderSet(){
     <li>Pembayaran dicatat lewat aplikasi (tombol <b>Catat Pembayaran</b>) dan tersimpan di sheet <b>Pembayaran</b>.</li>
     <li>Bila pembayaran kurang sedikit dari sisa hutang (selisih pembulatan/potongan), centang <b>Lunasi faktur ini</b> di form pembayaran. Selisih (maks. ${rp(maxSelisih())}) dicatat sebagai baris terpisah dengan metode “Selisih”.</li>
     <li>Nomor E-Faktur dipakai sebagai kunci. Baris dengan nomor yang sama hanya dihitung sekali.</li>
-   </ol></div></div></div>`;
+   </ol></div></div></div>
+  <div style="text-align:center;color:var(--mut);font-size:12.5px;padding:4px 0 10px"><div style="font-weight:600">Created By Furqon S</div><div>Versi ${APP_VERSION}</div></div>`;
+  updateInstUI();
 }
 async function saveSet(){
   busy(true);
