@@ -407,13 +407,24 @@ function downloadPDF(){
     el.style.height = 'auto';
   });
   
+  // Ensure rows never break inside pages and tfoot appears cleanly at the end
+  clone.querySelectorAll('tr').forEach(tr => {
+    tr.style.pageBreakInside = 'avoid';
+    tr.style.breakInside = 'avoid';
+  });
+  clone.querySelectorAll('tfoot td').forEach(td => {
+    td.style.backgroundColor = '#f8fafc';
+    td.style.fontWeight = 'bold';
+    td.style.borderTop = '2px solid #cbd5e1';
+  });
+
   const opt = {
     margin:      [10, 10, 10, 10],
     filename:    'laporan-hutang.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
     jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
-    pagebreak:   { mode: ['css', 'legacy'] }
+    pagebreak:   { mode: ['avoid-all', 'css', 'legacy'], avoid: ['tr', '.panel'] }
   };
   
   busy(true);
