@@ -63,7 +63,7 @@ button,input,select{font-family:inherit;font-size:14px}
 .top .ttl{font-weight:700;font-size:16px;line-height:1.1}
 .top .ttl small{display:block;font-weight:400;opacity:.75;font-size:11.5px;margin-top:2px}
 .top .sp{flex:1}
-.top .icbtn{background:rgba(255,255,255,.12);border:0;color:#fff;width:36px;height:36px;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+.top .icbtn{background:rgba(255,255,255,.12);border:0;color:#fff;width:36px;height:36px;border-radius:8px;display:grid;place-items:center;cursor:pointer;flex:none}
 .top .icbtn:hover{background:rgba(255,255,255,.22)}
 .top .burger{display:none}
 .usr{display:flex;align-items:center;gap:10px;padding-left:12px;border-left:1px solid rgba(255,255,255,.25)}
@@ -182,6 +182,8 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 #pg.dash .fill{overflow:auto;flex:1;min-height:0;max-height:none}
 @media(max-width:1000px){#pg.dash{min-height:0}#pg.dash .grid2,#pg.dash .grid2b{grid-template-rows:none;min-height:0;flex:none}#pg.dash .panel>.bd.cb{min-height:260px}#pg.dash .fill{max-height:320px}}
 .infobox{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:8px}
+.chk{display:flex;gap:8px;align-items:flex-start;margin:10px 0 14px;font-size:13px;cursor:pointer}
+.chk input{margin-top:3px;width:16px;height:16px;flex:none}
 
 /* ===== TOAST & LOADER ===== */
 #toasts{position:fixed;right:18px;bottom:18px;z-index:100;display:flex;flex-direction:column;gap:8px}
@@ -194,6 +196,9 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 .note{background:var(--brand-l);border-radius:10px;padding:14px 16px;font-size:13px;color:#1e3a5f}
 .note ol{margin:8px 0 0;padding-left:20px}
 
+/* kartu daftar hutang (hanya tampil di HP) */
+.mcards{display:none}
+
 @media(max-width:1000px){
   .grid2,.grid2b{grid-template-columns:1fr}
   #login{grid-template-columns:1fr}.lg-l{display:none}
@@ -204,7 +209,52 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   .usr .tx{display:none}
 }
 @media(max-width:560px){.row2,.kv2{grid-template-columns:1fr}.ph h1{font-size:20px}}
-@media print{.top,.side,.noprint,.tools,.pg,#toasts{display:none!important}.main{margin:0;padding:0}.panel{box-shadow:none;border:0}.tw{max-height:none;overflow:visible}body{background:#fff}}
+
+/* ===== TAMPILAN HP ===== */
+@media(max-width:700px){
+  body{font-size:13.5px}
+  .inp,select.inp{font-size:16px} /* cegah auto-zoom di iOS */
+  .top{height:56px;padding:0 10px;gap:8px}
+  .top .ttl{min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top .ttl small{display:none}
+  .usr{padding-left:8px;gap:6px}
+  .avatar{display:none}
+  .side{top:59px;width:82%;max-width:290px}
+  .main{padding:70px 10px 24px}
+  .lg-r{padding:20px}
+  .ph .acts{width:100%}
+  .ph .acts .btn{flex:1;justify-content:center}
+  .kpis,#pg.dash .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi,#pg.dash .kpi{padding:10px 12px;gap:8px}
+  .kpi .ki,#pg.dash .kpi .ki{display:none}
+  .kpi .kv,#pg.dash .kpi .kv{font-size:15px}
+  .tools{padding:10px}
+  .sbox{min-width:100%}
+  .tools select.inp{flex:1 1 45%;max-width:none!important;width:auto;min-width:0}
+  .panel>.hd{padding:12px}
+  .panel>.bd{padding:12px}
+  th,td{padding:9px 10px}
+  .tw{max-height:70vh}
+  #fk .tw{display:none}
+  .mcards{display:block}
+  .mc{padding:12px;border-bottom:1px solid var(--bd);cursor:pointer}
+  .mc:active{background:#f1f5f9}
+  .mc1{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+  .mc1 b{min-width:0}
+  .mc1 span{font-weight:800;color:var(--brand);white-space:nowrap}
+  .mc2{color:var(--mut);font-size:12px;margin:3px 0 6px}
+  .mc3{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+  .mtot{padding:12px;font-weight:600;background:#f8fafc;text-align:right}
+  .pg{justify-content:center;padding:10px}
+  .drawer{width:100%}
+  .modal{max-height:calc(100% - 16px)}
+  .modal .mb{padding:14px}
+  .modal .mh,.modal .mf{padding:12px 14px}
+  .dr-b{padding:14px}
+  #toasts{left:10px;right:10px;bottom:10px}
+  .toast{max-width:none}
+}
+@media print{.top,.side,.noprint,.tools,.pg,#toasts{display:none!important}.main{margin:0;padding:0}.panel{box-shadow:none;border:0}.tw{max-height:none;overflow:visible}body{background:#fff}#fk .tw{display:block!important}.mcards{display:none!important}}
 </style>
 </head>
 <body>
@@ -501,6 +551,7 @@ function drawFaktur(){
   <div class="tw"><table><thead><tr>${th('tgl','Tanggal')}${th('no','Nomor E-Faktur')}${th('supplier','Supplier')}${th('nota','Nota')}${th('masa','Masa Pajak')}${th('dpp','Harga Jual',1)}${th('ppn','PPN',1)}${th('total','Total',1)}${th('dibayar','Dibayar',1)}${th('sisa','Sisa',1)}${th('jt','Jatuh Tempo')}<th>Status</th></tr></thead>
   <tbody>${rows.length?rows.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.tgl)}</td><td class="mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td>${esc(f.supplier)}</td><td>${esc(f.nota)||'<span class="sub">-</span>'}</td><td>${esc(f.masa)} ${esc(f.tahun)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td>${fd(f.jt)}</td><td>${badge(f)}</td></tr>`).join(''):`<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>`}</tbody>
   <tfoot><tr><td colspan="5">Total (${n} faktur)</td><td class="r mono">${num(sum(a,'dpp'))}</td><td class="r mono">${num(sum(a,'ppn'))}</td><td class="r mono">${num(sum(a,'total'))}</td><td class="r mono">${num(sum(a,'dibayar'))}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td colspan="2"></td></tr></tfoot></table></div>
+  <div class="mcards">${rows.length?rows.map(f=>`<div class="mc" onclick="openDetail('${esc(f.no)}')"><div class="mc1"><b>${esc(f.supplier)}</b><span>${num(f.sisa)}</span></div><div class="mc2">${esc(f.nota)||'tanpa nota'} · ${fd(f.tgl)} · JT ${fd(f.jt)}</div><div class="mc3"><span>${badge(f)}</span><span class="sub">Total ${num(f.total)}</span></div></div>`).join(''):'<div class="empty">Tidak ada data yang cocok dengan filter.</div>'}<div class="mtot">Total sisa (${n} faktur): <b>${rp(sum(a,'sisa'))}</b></div></div>
   <div class="pg"><div>Menampilkan ${n?st+1:0}–${Math.min(st+F.size,n)} dari ${n} data</div>
    <div class="pb"><select class="inp" style="width:auto;padding:6px 8px" onchange="S.f.size=+this.value;S.f.page=1;drawFaktur()">${[10,25,50,100].map(x=>`<option ${F.size===x?'selected':''}>${x}</option>`).join('')}</select>
    <button class="btn sec sm" ${F.page<=1?'disabled':''} onclick="S.f.page--;drawFaktur()">‹ Sebelumnya</button><span>Hal ${F.page}/${pages}</span><button class="btn sec sm" ${F.page>=pages?'disabled':''} onclick="S.f.page++;drawFaktur()">Berikutnya ›</button></div></div>`;
@@ -514,7 +565,7 @@ function openDetail(no){
   $('drawer').innerHTML=`
   <div class="dr-h"><h3>Detail Faktur</h3><button onclick="closeAll()">${ic('x')}</button></div>
   <div class="dr-b">
-   <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${badge(f)}${f.manual?' <span class="badge b-gray">Input Manual</span>':''}</span><span style="display:flex;gap:6px">${can.pay()?`<button class="btn sec sm" onclick="openFaktur('${esc(f.no)}')">${ic('edit')} Ubah</button>`:''}${f.manual&&can.admin()?`<button class="btn danger sm" onclick="delFaktur('${esc(f.no)}')">${ic('trash')} Hapus</button>`:''}</span></div>
+   <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>${badge(f)}${f.manual?' <span class="badge b-gray">Input Manual</span>':''}</span><span style="display:flex;gap:6px">${can.pay()?`<button class="btn sec sm" onclick="openFaktur('${esc(f.no)}')">${ic('edit')} Ubah</button>`:''}${f.manual&&can.admin()?`<button class="btn danger sm" onclick="delFaktur('${esc(f.no)}')">${ic('trash')} Hapus</button>`:''}</span></div>
    <div class="kv2">
     <div class="full"><div class="k">Supplier</div><div class="v">${esc(f.supplier)}</div></div>
     <div><div class="k">NPWP</div><div class="v">${esc(f.npwp)||'-'}</div></div>
@@ -544,7 +595,6 @@ function openDetail(no){
 function openPay(no){
   if(!can.pay())return toast('Anda tidak memiliki hak mencatat pembayaran','err');
   const f=no?S.map[no]:null;
-  const open=S.data.faktur.filter(x=>x.sisa>=1);
   const today=S.data.meta.today;
   $('modal').innerHTML=`
   <div class="mh"><h3>Catat Pembayaran Hutang</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
@@ -559,9 +609,11 @@ function openPay(no){
     <div class="fg"><label>Tanggal Bayar</label>${dateField('pTgl',today)}</div>
     <div class="fg"><label>Metode</label><select class="inp" id="pMet"><option>Transfer</option><option>Tunai</option><option>Giro</option><option>Cek</option><option>Lainnya</option></select></div>
    </div>
-   <div class="fg"><label>Jumlah Dibayar (Rp)</label>
-    <div style="display:flex;gap:8px"><input class="inp" id="pJml" inputmode="numeric" placeholder="0" oninput="fmtMoney(this)"><button type="button" class="btn sec" onclick="payFull()">Bayar Penuh</button></div></div>
-   <div class="fg"><label>No. Referensi / Bukti Transfer</label><input class="inp" id="pRef"></div>
+   <div class="fg" style="margin-bottom:0"><label>Jumlah Dibayar (Rp)</label>
+    <div style="display:flex;gap:8px"><input class="inp" id="pJml" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);selInfo()"><button type="button" class="btn sec" onclick="payFull()">Bayar Penuh</button></div>
+    <div class="infobox hidden" id="pSel"></div>
+    <label class="chk hidden" id="pLunasW"><input type="checkbox" id="pLunas"><span>Lunasi faktur ini, selisih dicatat sebagai penyesuaian</span></label></div>
+   <div class="fg" style="margin-top:16px"><label>No. Referensi / Bukti Transfer</label><input class="inp" id="pRef"></div>
    <div class="fg" style="margin-bottom:0"><label>Keterangan</label><input class="inp" id="pKet"></div>
   </div>
   <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="pBtn" onclick="submitPay()">${ic('check')} Simpan Pembayaran</button></div>`;
@@ -573,6 +625,21 @@ function openPay(no){
 function closeModal(){$('modal').classList.remove('on');if(!$('drawer').classList.contains('on'))$('scrim').classList.remove('on')}
 function fmtMoney(el){const d=el.value.replace(/\D/g,'');el.value=d?(+d).toLocaleString('id-ID'):''}
 function getMoney(){return parseInt(($('pJml').value||'').replace(/\D/g,''),10)||0}
+function maxSelisih(){const v=S.data&&S.data.settings&&S.data.settings.max_selisih;return typeof v==='number'?v:10000}
+function selInfo(){
+  const b=$('pSel'),w=$('pLunasW');if(!b||!w)return;
+  const f=S.map[S._payNo],jml=getMoney();
+  const sel=f?Math.round((f.sisa-jml)*100)/100:0;
+  if(f&&jml>0&&sel>=1){
+    const ok=sel<=maxSelisih();
+    b.classList.remove('hidden');
+    b.innerHTML='Selisih <b>'+rp(sel)+'</b>. '+(ok?'Centang opsi di bawah untuk melunasi faktur ini, atau biarkan kosong agar sisanya tetap menjadi hutang.':'Melebihi batas penyesuaian ('+rp(maxSelisih())+'), sisa tetap menjadi hutang.');
+    w.classList.toggle('hidden',!ok);
+    if(!ok)$('pLunas').checked=false;
+  }else{
+    b.classList.add('hidden');w.classList.add('hidden');$('pLunas').checked=false;
+  }
+}
 function payOptions(q){
   q=(q||'').toLowerCase().trim();
   return S.data.faktur.filter(x=>x.sisa>=1&&(!q||(x.nota+' '+x.no+' '+x.supplier).toLowerCase().includes(q)))
@@ -586,7 +653,7 @@ function drawPayList(q){
 function showPayList(){const el=$('pNo');if(!el||el.readOnly)return;if(S._payNo)el.select();drawPayList(S._payNo?'':el.value)}
 function hidePayList(){const l=$('pList');if(l)l.classList.add('hidden')}
 function onPaySearch(){
-  const v=$('pNo').value;S._payNo='';$('pInfo').classList.add('hidden');
+  const v=$('pNo').value;S._payNo='';$('pInfo').classList.add('hidden');selInfo();
   const f=S.map[v.trim()];
   if(f&&f.sisa>=1){pickPay(f.no);return}
   drawPayList(v);
@@ -602,8 +669,9 @@ function pickPay(no){
   const k=$('pKet'),auto='Pembayaran nota '+(f.nota||f.no);
   if(!k.value||k.value===S._autoKet)k.value=auto;
   S._autoKet=auto;
+  selInfo();
 }
-function payFull(){const f=S.map[S._payNo];if(!f)return toast('Pilih nota / faktur terlebih dahulu','err');$('pJml').value=Math.round(f.sisa).toLocaleString('id-ID')}
+function payFull(){const f=S.map[S._payNo];if(!f)return toast('Pilih nota / faktur terlebih dahulu','err');$('pJml').value=Math.round(f.sisa).toLocaleString('id-ID');selInfo()}
 async function submitPay(){
   const no=S._payNo,f=S.map[no],jml=getMoney();
   if(!f)return toast('Pilih Nota / faktur dari daftar terlebih dahulu','err');
@@ -612,10 +680,12 @@ async function submitPay(){
   if(!tg)return toast('Tanggal bayar harus berformat dd-mm-yyyy','err');
   if(jml<=0)return toast('Jumlah pembayaran wajib diisi','err');
   if(jml>f.sisa+1)return toast('Jumlah melebihi sisa hutang ('+rp(f.sisa)+')','err');
+  const sel=Math.round((f.sisa-jml)*100)/100;
+  const lunasi=$('pLunas').checked&&sel>=1&&sel<=maxSelisih();
   const b=$('pBtn');b.disabled=true;
   try{
-    await api('addPayment',{no:no,tgl:tg,jumlah:jml,metode:$('pMet').value,ref:$('pRef').value,ket:$('pKet').value});
-    toast('Pembayaran '+rp(jml)+' berhasil dicatat');
+    await api('addPayment',{no:no,tgl:tg,jumlah:jml,lunasi:lunasi,metode:$('pMet').value,ref:$('pRef').value,ket:$('pKet').value});
+    toast('Pembayaran '+rp(jml)+' berhasil dicatat'+(lunasi?' (selisih '+rp(sel)+' dilunasi)':''));
     const wasDrawer=$('drawer').classList.contains('on');
     closeModal();await reload(true);
     if(wasDrawer)openDetail(no);
@@ -816,11 +886,11 @@ function exportBayar(){csv([['ID','Tanggal','Nomor E-Faktur','Supplier','Jumlah'
 function drawBayar(){
   const a=bFiltered();
   $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.admin()?'<th></th>':''}</tr></thead>
-  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.admin()?`<td><button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button></td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
+  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.admin()?`<td><button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button></td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
   <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.admin()?2:1}"></td></tr></tfoot></table></div>`;
 }
 async function delPay(id){
-  if(!confirm('Hapus pembayaran ini? Sisa hutang faktur akan bertambah kembali.'))return;
+  if(!confirm('Hapus pembayaran ini? Sisa hutang faktur akan bertambah kembali. Jika pembayaran ini punya baris selisih, baris itu ikut dihapus.'))return;
   busy(true);
   try{await api('deletePayment',{id:id});toast('Pembayaran dihapus');await reload(true)}catch(e){toast(e.message,'err')}
   busy(false);
@@ -869,6 +939,7 @@ function renderSet(){
     <li>Buka sheet <b>Faktur</b> di spreadsheet, lalu tempel baris baru di bawah data terakhir (kolom A–I, urutan sama seperti Excel e-Faktur). Gunakan <b>Paste Special → Values only</b> (Ctrl+Shift+V).</li>
     <li>Kembali ke aplikasi ini, lalu klik tombol <b>muat ulang</b> (ikon ⟳) di pojok kanan atas.</li>
     <li>Pembayaran dicatat lewat aplikasi (tombol <b>Catat Pembayaran</b>) dan tersimpan di sheet <b>Pembayaran</b>.</li>
+    <li>Bila pembayaran kurang sedikit dari sisa hutang (selisih pembulatan/potongan), centang <b>Lunasi faktur ini</b> di form pembayaran. Selisih (maks. ${rp(maxSelisih())}) dicatat sebagai baris terpisah dengan metode “Selisih”.</li>
     <li>Nomor E-Faktur dipakai sebagai kunci. Baris dengan nomor yang sama hanya dihitung sekali.</li>
    </ol></div></div></div>`;
 }
