@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Hutang">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Sistem Manajemen Hutang</title>
+<script>window.__dip=null;window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__dip=e;if(window.updateInstUI)updateInstUI()});</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -273,7 +274,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 
   /* --- Dashboard: muat 1 layar, tanpa scroll --- */
   .main:has(#pg.dash){padding-bottom:calc(10px + var(--sab))}
-  #pg.dash{height:calc(100vh - 74px - var(--sat) - var(--sab));height:calc(100dvh - 74px - var(--sat) - var(--sab));min-height:0;gap:8px;overflow:hidden}
+  #pg.dash{height:auto;min-height:0;gap:10px;overflow:visible}
   #pg.dash .banner{display:none}
   #pg.dash .ph{align-items:center;flex-wrap:nowrap;gap:8px;flex:none}
   #pg.dash .ph>div:first-child{min-width:0}
@@ -287,19 +288,20 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   #pg.dash .kpi .kl{font-size:10.5px}
   #pg.dash .kpi .kv{font-size:13.5px;margin-top:1px}
   #pg.dash .kpi .ks{font-size:10px;margin-top:0}
-  #pg.dash .blk{flex:1 1 0;min-height:0}
+  #pg.dash .blk{flex:none;min-height:0}
   #pg.dash .mseg{display:flex;gap:4px;background:#e8ebf4;padding:3px;border-radius:11px;margin-bottom:6px;flex:none}
   #pg.dash .mseg button{flex:1;border:0;background:transparent;padding:6px 6px;border-radius:8px;font-weight:600;font-size:12px;color:var(--mut);cursor:pointer}
   #pg.dash .mseg button.on{background:#fff;color:var(--brand);box-shadow:0 1px 3px rgba(15,23,42,.12)}
-  #pg.dash .blk>.grid2,#pg.dash .blk>.grid2b{flex:1 1 0;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0}
+  #pg.dash .blk>.grid2,#pg.dash .blk>.grid2b{flex:none;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:none;gap:0}
   #pg.dash [data-v="1"]>.p2,#pg.dash [data-v="2"]>.p1{display:none}
   #pg.dash .panel{border-radius:14px}
   #pg.dash .panel>.hd{display:none}
   #pg.dash .panel>.bd{padding:8px 10px}
-  #pg.dash .panel>.bd.cb{min-height:0}
+  #pg.dash .panel>.bd.cb{min-height:280px}
   #pg.dash .cw{inset:4px 4px}
-  #pg.dash .fill{max-height:none;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none}
-  #pg.dash .fill::-webkit-scrollbar{display:none;width:0;height:0}
+  #pg.dash .fill{max-height:none;overflow:visible;flex:none}
+  #pg.dash th{position:static}
+  #pg.dash td{white-space:normal}
   #pg.dash .rank{gap:10px}
   #pg.dash th,#pg.dash td{padding:7px 8px;font-size:12px}
 }
@@ -361,7 +363,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 /* ====================== UTIL ====================== */
@@ -571,20 +573,23 @@ function renderDashboard(){
 }
 
 /* ====== PWA: pasang ke HP / laptop ====== */
-let _dip=null;
 const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function updateInstUI(){
-  const b=$('instBtn');if(b)b.classList.toggle('hidden',!_dip||isStandalone());
+  const b=$('instBtn');if(b)b.classList.toggle('hidden',!window.__dip||isStandalone());
   const s=$('instStat'),sb=$('instSet');if(!s)return;
   if(isStandalone()){s.textContent='Aplikasi sudah terpasang dan sedang dibuka sebagai aplikasi.';if(sb)sb.disabled=true}
-  else if(_dip)s.textContent='Siap dipasang. Klik tombol di bawah, lalu pilih Pasang/Instal.';
-  else s.textContent='Pemasangan otomatis belum tersedia di browser ini. Klik tombol di bawah untuk melihat petunjuk manual.';
+  else if(window.__dip)s.textContent='Siap dipasang. Klik tombol di bawah, lalu pilih Instal.';
+  else s.textContent='Browser belum mengizinkan pemasangan otomatis. Klik tombol di bawah untuk caranya.';
 }
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;updateInstUI()});
-window.addEventListener('appinstalled',()=>{_dip=null;updateInstUI();toast('Aplikasi berhasil dipasang')});
+window.addEventListener('appinstalled',()=>{window.__dip=null;updateInstUI();toast('Aplikasi berhasil dipasang')});
 async function installApp(){
   if(isStandalone())return toast('Aplikasi sudah terpasang');
-  if(_dip){const d=_dip;_dip=null;d.prompt();try{await d.userChoice}catch(e){}updateInstUI();return}
+  const d=window.__dip;
+  if(d){
+    window.__dip=null;
+    try{d.prompt();const r=await d.userChoice;if(r&&r.outcome==='accepted')toast('Memasang aplikasi...')}catch(e){}
+    updateInstUI();return;
+  }
   showInstallHelp();
 }
 async function showInstallHelp(){
