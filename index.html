@@ -2,15 +2,22 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hutang">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Sistem Manajemen Hutang</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-:root{--brand:#4f46e5;--brand-d:#4338ca;--brand-l:#eef2ff;--acc:#4f46e5;--bg:#f4f6fb;--card:#fff;--tx:#0f172a;--mut:#64748b;--bd:#e5e9f2;--ok:#059669;--warn:#d97706;--bad:#e11d48;--r:14px;--sh:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05)}
+:root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--brand:#4f46e5;--brand-d:#4338ca;--brand-l:#eef2ff;--acc:#4f46e5;--bg:#f4f6fb;--card:#fff;--tx:#0f172a;--mut:#64748b;--bd:#e5e9f2;--ok:#059669;--warn:#d97706;--bad:#e11d48;--r:14px;--sh:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05)}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
@@ -60,7 +67,7 @@ button,input,select{font-family:inherit;font-size:14px}
 .btn.danger:hover{background:#fff1f2}
 
 /* ===== SHELL ===== */
-.top{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(180%) blur(10px);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--bd);color:var(--tx);display:flex;align-items:center;gap:12px;padding:0 18px;z-index:40}
+.top{position:fixed;top:0;left:0;right:0;height:calc(60px + var(--sat));background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(180%) blur(10px);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--bd);color:var(--tx);display:flex;align-items:center;gap:12px;padding:var(--sat) 18px 0;z-index:40}
 .top .logo{width:34px;height:34px;border-radius:10px}
 .top .ttl{font-weight:700;font-size:15.5px;line-height:1.1;letter-spacing:-.01em}
 .top .ttl small{display:block;font-weight:500;color:var(--mut);font-size:11.5px;margin-top:3px}
@@ -72,13 +79,13 @@ button,input,select{font-family:inherit;font-size:14px}
 .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:grid;place-items:center;font-weight:700}
 .usr .nm{font-weight:600;font-size:13px;line-height:1.1}
 .usr .rl{font-size:11px;color:var(--mut);text-transform:capitalize}
-.side{position:fixed;top:60px;bottom:0;left:0;width:248px;background:#fff;border-right:1px solid var(--bd);padding:14px 12px;overflow:auto;z-index:30;transition:.25s}
+.side{position:fixed;top:calc(60px + var(--sat));bottom:0;left:0;width:248px;background:#fff;border-right:1px solid var(--bd);padding:14px 12px;overflow:auto;z-index:30;transition:.25s}
 .side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);font-weight:700;margin:10px 10px 8px}
 .nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#475569;text-decoration:none;font-weight:500;margin-bottom:2px;cursor:pointer;position:relative}
 .nav a:hover{background:#f5f7ff}
 .nav a.on{background:var(--brand-l);color:var(--brand);font-weight:600}
 .nav a.on:before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--brand)}
-.main{margin-left:248px;padding:82px 26px 40px;min-height:100vh;min-width:0}
+.main{margin-left:248px;padding:calc(82px + var(--sat)) 26px 40px;min-height:100vh;min-width:0}
 #view,#pg{min-width:0;max-width:100%}
 .crumb{color:var(--mut);font-size:12.5px;margin-bottom:6px}
 .crumb b{color:var(--brand)}
@@ -208,7 +215,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   #login{grid-template-columns:1fr}.lg-l{display:none}
   .side{transform:translateX(-100%)}
   .side.on{transform:none;box-shadow:8px 0 30px rgba(0,0,0,.2)}
-  .main{margin-left:0;padding:76px 14px 30px}
+  .main{margin-left:0;padding:calc(76px + var(--sat)) 14px 30px}
   .top .burger{display:grid}
   .usr .tx{display:none}
   #pg.dash{min-height:0}
@@ -224,13 +231,13 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   body{font-size:13.5px}
   .inp,select.inp{font-size:16px} /* cegah auto-zoom di iOS */
   .crumb{display:none}
-  .top{height:54px;padding:0 10px;gap:8px}
+  .top{height:calc(54px + var(--sat));padding:var(--sat) 10px 0;gap:8px}
   .top .ttl{min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .top .ttl small{display:none}
   .usr{padding-left:8px;gap:6px}
   .avatar{display:none}
-  .side{top:54px;width:82%;max-width:290px}
-  .main{padding:64px 10px 24px}
+  .side{top:calc(54px + var(--sat));width:82%;max-width:290px}
+  .main{padding:calc(64px + var(--sat)) 10px calc(24px + var(--sab))}
   .lg-r{padding:20px}
   .ph .acts{width:100%}
   .ph .acts .btn{flex:1;justify-content:center}
@@ -265,8 +272,8 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   .toast{max-width:none}
 
   /* --- Dashboard: muat 1 layar, tanpa scroll --- */
-  .main:has(#pg.dash){padding-bottom:10px}
-  #pg.dash{height:calc(100vh - 74px);height:calc(100dvh - 74px);min-height:0;gap:8px;overflow:hidden}
+  .main:has(#pg.dash){padding-bottom:calc(10px + var(--sab))}
+  #pg.dash{height:calc(100vh - 74px - var(--sat) - var(--sab));height:calc(100dvh - 74px - var(--sat) - var(--sab));min-height:0;gap:8px;overflow:hidden}
   #pg.dash .banner{display:none}
   #pg.dash .ph{align-items:center;flex-wrap:nowrap;gap:8px;flex:none}
   #pg.dash .ph>div:first-child{min-width:0}
@@ -291,7 +298,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   #pg.dash .panel>.bd{padding:8px 10px}
   #pg.dash .panel>.bd.cb{min-height:0}
   #pg.dash .cw{inset:4px 4px}
-  #pg.dash .fill{max-height:none}
+  #pg.dash .fill{max-height:none;overflow:hidden}
   #pg.dash .rank{gap:10px}
   #pg.dash th,#pg.dash td{padding:7px 8px;font-size:12px}
 }
@@ -328,6 +335,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
     <div class="logo" data-ic="layers"></div>
     <div class="ttl">Sistem Manajemen Hutang<small id="coName">-</small></div>
     <div class="sp"></div>
+    <button class="icbtn hidden" id="instBtn" title="Pasang aplikasi" onclick="installApp()" data-ic="download"></button>
     <button class="icbtn" title="Muat ulang data" onclick="reload()" data-ic="refresh"></button>
     <div class="usr">
       <div class="avatar" id="avt">A</div>
@@ -500,7 +508,7 @@ function metaBanner(){
 function dseg(b,v){
   const g=b.parentNode.nextElementSibling;g.dataset.v=v;
   [...b.parentNode.children].forEach(x=>x.classList.toggle('on',x===b));
-  setTimeout(()=>S.charts.forEach(c=>c.resize()),30);
+  setTimeout(()=>{S.charts.forEach(c=>c.resize());fitDash()},40);
 }
 function renderDashboard(){
   const fk=S.data.faktur,open=fk.filter(f=>f.sisa>=1),od=open.filter(f=>f.umur>0);
@@ -558,7 +566,33 @@ function renderDashboard(){
   // prioritas
   const pr=[...open].sort((a,b)=>a.jt.localeCompare(b.jt)).slice(0,8);
   $('prio').innerHTML=pr.length?pr.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.jt)}<div class="sub">${f.umur>0?'Lewat '+f.umur+' hari':f.umur===0?'Hari ini':(-f.umur)+' hari lagi'}</div></td><td>${esc(f.supplier)}</td><td class="r mono"><b>${num(f.sisa)}</b></td></tr>`).join(''):'<tr><td colspan="3" class="empty">Semua faktur sudah lunas</td></tr>';
+  requestAnimationFrame(fitDash);setTimeout(fitDash,300);
 }
+
+/* ====== Dashboard HP: tampilkan hanya baris yang muat, tanpa scroll ====== */
+function fitDash(){
+  document.querySelectorAll('#top5 .it,#prio tr').forEach(e=>e.style.display='');
+  if(!window.matchMedia('(max-width:700px)').matches||S.page!=='dashboard')return;
+  [['top5',8],['prio',2]].forEach(([id,pad])=>{
+    const el=$(id),box=el&&el.closest('.fill');
+    if(!box||!box.clientHeight)return;
+    const lim=box.getBoundingClientRect().bottom-pad;
+    let hide=false;
+    [...el.children].forEach(c=>{
+      if(!hide&&c.getBoundingClientRect().bottom>lim)hide=true;
+      if(hide)c.style.display='none';
+    });
+  });
+}
+window.addEventListener('resize',()=>{if(S.page==='dashboard')fitDash()});
+
+/* ====== PWA: pasang ke HP ====== */
+let _dip=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;$('instBtn').classList.remove('hidden')});
+window.addEventListener('appinstalled',()=>{_dip=null;$('instBtn').classList.add('hidden');toast('Aplikasi berhasil dipasang')});
+async function installApp(){if(!_dip)return;_dip.prompt();try{await _dip.userChoice}catch(e){}_dip=null;$('instBtn').classList.add('hidden')}
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
 /* ====================== DAFTAR HUTANG ====================== */
 function renderFaktur(){
@@ -992,6 +1026,10 @@ function renderSet(){
     <button class="btn" onclick="savePw()">Ubah Password</button>
    </div></div>
   </div>
+  <div class="panel"><div class="hd"><h3>Pasang di HP</h3></div><div class="bd"><div class="note">
+   <b>Android (Chrome):</b> ketuk ikon unduh di header, atau menu ⋮ → <b>Instal aplikasi</b>.<br>
+   <b>iPhone (Safari):</b> ketuk tombol Bagikan → <b>Tambah ke Layar Utama</b>.
+  </div></div></div>
   <div class="panel"><div class="hd"><h3>Cara Memperbarui Data</h3></div><div class="bd"><div class="note">
    Data hutang dibaca langsung dari Google Spreadsheet:
    <ol>
