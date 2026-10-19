@@ -1,6 +1,6 @@
 /* Service worker - Sistem Manajemen Hutang
    Ubah VERSION setiap kali index.html diperbarui agar cache HP ikut diperbarui. */
-const VERSION = 'hutang-v4';
+const VERSION = 'hutang-v5';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 const CDN = ['https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'];
 
