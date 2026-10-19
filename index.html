@@ -305,7 +305,27 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   #pg.dash .rank{gap:10px}
   #pg.dash th,#pg.dash td{padding:7px 8px;font-size:12px}
 }
-@media print{.top,.side,.noprint,.tools,.pg,#toasts{display:none!important}.main{margin:0;padding:0}.panel{box-shadow:none;border:0}.tw{max-height:none;overflow:visible}body{background:#fff}#fk .tw{display:block!important}.mcards{display:none!important}}
+@media print{
+  @page{size: A4; margin: 15mm;}
+  body{background:#fff; color:#0f172a; text-align:justify; font-size:12pt; line-height:1.5;}
+  .top,.side,.noprint,.tools,.pg,#toasts{display:none!important}
+  .main{margin:0!important; padding:0!important; width:100%!important; max-width:100%!important;}
+  .panel{box-shadow:none!important; border:1px solid #cbd5e1!important; margin-bottom:20px!important; border-radius:8px!important; page-break-inside:avoid;}
+  .panel>.hd{background:#f8fafc!important; border-bottom:1px solid #cbd5e1!important; padding:10px 14px!important;}
+  .panel>.bd{padding:14px!important;}
+  .tw{max-height:none!important; overflow:visible!important; width:100%!important;}
+  table{width:100%!important; border-collapse:collapse!important; font-size:11pt!important;}
+  th,td{border:1px solid #cbd5e1!important; padding:8px 10px!important; white-space:normal!important;}
+  th{background:#f1f5f9!important; color:#0f172a!important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  tfoot td{background:#f8fafc!important; font-weight:bold!important;}
+  #fk .tw{display:block!important}
+  .mcards{display:none!important}
+  .kpis{display:grid!important; grid-template-columns:repeat(3,1fr)!important; gap:10px!important; margin-bottom:15px!important;}
+  .kpi{border:1px solid #cbd5e1!important; box-shadow:none!important; padding:10px!important; background:#fff!important;}
+  .grid2,.grid2b{display:block!important;}
+  .grid2>*, .grid2b>* {margin-bottom:15px!important;}
+  canvas{max-width:100%!important; height:auto!important;}
+}
 </style>
 </head>
 <body>
@@ -1113,3 +1133,5 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
 </script>
 </body>
 </html>
+html hutang.txt
+Menampilkan html hutang.txt.
