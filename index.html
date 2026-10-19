@@ -403,11 +403,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2s
 function fakturPdfTable(a){
   const head=['Tanggal','Nomor E-Faktur','Supplier','Nota','Masa Pajak','Harga Jual','PPN','Total','Dibayar','Sisa','Jatuh Tempo','Status'];
   const right=[5,6,7,8,9];
+  const cw=[6.5,10.5,14,9,6,8,7,8,7,8,6.5,8];   // lebar kolom (%), total 98,5 -> selalu muat
+  const cg='<colgroup>'+cw.map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>';
   const th=head.map((h,i)=>`<th class="nw${right.includes(i)?' r':''}">${h}</th>`).join('');
   const masa=f=>{const m=String(f.masa||'');return esc(m.length>4?m.slice(0,3):m)+' '+esc(f.tahun)};
   const rows=a.map(f=>`<tr><td class="nw">${fd(f.tgl)}</td><td class="nw mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td class="wc">${esc(f.supplier)}</td><td class="wc">${esc(f.nota)||'-'}</td><td class="nw">${masa(f)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td class="nw">${fd(f.jt)}</td><td class="nw">${badge(f)}</td></tr>`).join('');
   const foot=a.length?`<tfoot><tr><td colspan="5">Total (${a.length} faktur)</td><td class="r mono">${num(sum(a,'dpp'))}</td><td class="r mono">${num(sum(a,'ppn'))}</td><td class="r mono">${num(sum(a,'total'))}</td><td class="r mono">${num(sum(a,'dibayar'))}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td colspan="2"></td></tr></tfoot>`:'';
-  return `<div class="tw"><table class="fk"><thead><tr>${th}</tr></thead><tbody>${a.length?rows:'<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>'}</tbody>${foot}</table></div>`;
+  return `<div class="tw"><table class="fk">${cg}<thead><tr>${th}</tr></thead><tbody>${a.length?rows:'<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>'}</tbody>${foot}</table></div>`;
 }
 
 function downloadPDF(){
@@ -457,11 +459,12 @@ function downloadPDF(){
   #pdfwrap th.r,#pdfwrap td.r{text-align:right!important;white-space:nowrap!important}
   #pdfwrap td.mono{white-space:nowrap!important}
   #pdfwrap td:last-child{white-space:nowrap!important}
-  #pdfwrap table.fk{font-size:11px!important}
-  #pdfwrap table.fk th,#pdfwrap table.fk td{padding:8px 6px!important}
+  #pdfwrap table.fk{table-layout:fixed!important;width:100%!important;font-size:10.5px!important}
+  #pdfwrap table.fk th,#pdfwrap table.fk td{padding:8px 4px!important;overflow:hidden}
+  #pdfwrap table.fk th{font-size:9.5px!important;letter-spacing:0!important}
   #pdfwrap table.fk th.nw,#pdfwrap table.fk td.nw{white-space:nowrap!important}
-  #pdfwrap table.fk td.wc{white-space:normal!important;min-width:120px}
-  #pdfwrap .badge{white-space:nowrap!important}
+  #pdfwrap table.fk td.wc{white-space:normal!important;word-break:break-word}
+  #pdfwrap .badge{white-space:nowrap!important;font-size:10px!important;padding:2px 7px!important}
   #pdfwrap tfoot td{background:#f8fafc!important;font-weight:700!important;border-top:2px solid #94a3b8!important}
   #pdfwrap tr{break-inside:avoid;page-break-inside:avoid}
   #pdfwrap .kpis{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:10px!important;margin-bottom:14px!important}
