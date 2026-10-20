@@ -409,7 +409,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.1.1';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 
@@ -651,9 +651,9 @@ const PAGES={
   faktur:{t:'Daftar Hutang',i:'file',r:()=>renderFaktur()},
   master:{t:'Daftar Supplier',i:'book',r:()=>renderMaster()},
   supplier:{t:'Rekap Supplier',i:'users',r:()=>renderSupplier()},
+  kartu:{t:'Kartu Hutang',i:'layers',r:()=>renderKartu()},
   bayar:{t:'Riwayat Pembayaran',i:'card',r:()=>renderBayar()},
   aging:{t:'Umur Hutang (Aging)',i:'clock',r:()=>renderAging()},
-  kartu:{t:'Kartu Hutang',i:'file',hide:1,nav:'supplier',r:()=>renderKartu()},
   set:{t:'Pengaturan',i:'sliders',r:()=>renderSet()}
 };
 async function boot(){
