@@ -409,7 +409,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 
@@ -422,7 +422,7 @@ function fakturPdfTable(a){
   const cg='<colgroup>'+cw.map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>';
   const th=head.map((h,i)=>`<th class="nw${right.includes(i)?' r':''}">${h}</th>`).join('');
   const masa=f=>{const m=String(f.masa||'');return esc(m.length>4?m.slice(0,3):m)+' '+esc(f.tahun)};
-  const rows=a.map(f=>`<tr><td class="nw">${fd(f.tgl)}</td><td class="nw mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td class="wc">${esc(f.supplier)}</td><td class="wc">${esc(f.nota)||'-'}</td><td class="nw">${masa(f)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td class="nw">${fd(f.jt)}</td><td class="nw">${badge(f)}</td></tr>`).join('');
+  const rows=a.map(f=>`<tr><td class="nw">${fd(f.tgl)}</td><td class="nw mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td class="wc">${esc(f.supplier)}</td><td class="wc">${esc(f.nota)||'-'}</td><td class="nw">${masa(f)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}${f.potongan?`<div class="sub">+ pot. ${num(f.potongan)}</div>`:''}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td class="nw">${fd(f.jt)}</td><td class="nw">${badge(f)}</td></tr>`).join('');
   const foot=a.length?`<tfoot><tr><td colspan="5">Total (${a.length} faktur)</td><td class="r mono">${num(sum(a,'dpp'))}</td><td class="r mono">${num(sum(a,'ppn'))}</td><td class="r mono">${num(sum(a,'total'))}</td><td class="r mono">${num(sum(a,'dibayar'))}</td><td class="r mono">${num(sum(a,'sisa'))}</td><td colspan="2"></td></tr></tfoot>`:'';
   return `<div class="tw"><table class="fk">${cg}<thead><tr>${th}</tr></thead><tbody>${a.length?rows:'<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>'}</tbody>${foot}</table></div>`;
 }
@@ -566,7 +566,7 @@ function busy(v){$('busy').classList.toggle('hidden',!v)}
 /* ====================== STATE & API ====================== */
 const S={token:null,user:null,data:null,map:{},charts:[],page:'dashboard',
   f:{q:'',status:'',periode:'',supplier:'',sort:'tgl',dir:'desc',page:1,size:25},
-  sq:'',pq:'',bf:'',bt:'',kn:'',pdel:new Set()};
+  sq:'',pq:'',bf:'',bt:'',kn:'',pdel:new Set(),ptq:''};
 const can={pay:()=>S.user&&['admin','staf'].includes(S.user.role),admin:()=>S.user&&S.user.role==='admin'};
 
 async function api(action,payload){
@@ -653,6 +653,7 @@ const PAGES={
   supplier:{t:'Rekap Supplier',i:'users',r:()=>renderSupplier()},
   kartu:{t:'Kartu Hutang',i:'layers',r:()=>renderKartu()},
   bayar:{t:'Riwayat Pembayaran',i:'card',r:()=>renderBayar()},
+  potongan:{t:'Retur & Potongan',i:'money',r:()=>renderPotongan()},
   aging:{t:'Umur Hutang (Aging)',i:'clock',r:()=>renderAging()},
   set:{t:'Pengaturan',i:'sliders',r:()=>renderSet()}
 };
@@ -718,7 +719,7 @@ function dseg(b,v){
 }
 function renderDashboard(){
   const fk=S.data.faktur,open=fk.filter(f=>f.sisa>=1),od=open.filter(f=>f.umur>0);
-  const tot=sum(fk,'total'),paid=sum(fk,'dibayar'),sisa=sum(fk,'sisa');
+  const tot=sum(fk,'total'),paid=sum(fk,'dibayar'),sisa=sum(fk,'sisa'),pot=sum(fk,'potongan');
   const pct=tot?Math.round(paid/tot*100):0;
   const dueSoon=open.filter(f=>f.umur<=0&&f.umur>=-7);
   $('pg').classList.add('dash');
@@ -728,7 +729,7 @@ function renderDashboard(){
   ${metaBanner()}
   <div class="kpis">
    ${kpi('c-blue','file','Total Tagihan',rp0(tot),fk.length+' faktur')}
-   ${kpi('c-green','check','Telah Dibayar',rp0(paid),pct+'% dari total tagihan')}
+   ${kpi('c-green','check','Telah Dibayar',rp0(paid),pct+'% dari total tagihan'+(pot?' · potongan '+rp0(pot):''))}
    ${kpi('c-amber','money','Sisa Hutang',rp0(sisa),open.length+' faktur belum lunas')}
    ${kpi('c-red','alert','Lewat Jatuh Tempo',rp0(sum(od,'sisa')),od.length+' faktur')}
    ${kpi('c-gray','clock','Jatuh Tempo ≤ 7 Hari',rp0(sum(dueSoon,'sisa')),dueSoon.length+' faktur')}
@@ -755,10 +756,10 @@ function renderDashboard(){
   Chart.defaults.color='#64748b';
   const lg=pos=>({position:pos,labels:{boxWidth:9,boxHeight:9,usePointStyle:true,padding:mob?8:14}});
   // chart 1
-  const g={};fk.forEach(f=>{const k=f.tgl?f.tgl.slice(0,7):'0000-00';g[k]=g[k]||{p:0,s:0};g[k].p+=f.dibayar;g[k].s+=f.sisa});
+  const g={};fk.forEach(f=>{const k=f.tgl?f.tgl.slice(0,7):'0000-00';g[k]=g[k]||{p:0,s:0};g[k].p+=f.dibayar+(f.potongan||0);g[k].s+=f.sisa});
   const ks=Object.keys(g).sort();
   S.charts.push(new Chart($('c1'),{type:'bar',data:{labels:ks.map(k=>k==='0000-00'?'Tanpa Tgl':MON[+k.slice(5)-1]+' '+k.slice(2,4)),datasets:[
-    {label:'Dibayar',data:ks.map(k=>g[k].p),backgroundColor:'#10b981',borderRadius:4},
+    {label:'Dibayar / Potongan',data:ks.map(k=>g[k].p),backgroundColor:'#10b981',borderRadius:4},
     {label:'Sisa Hutang',data:ks.map(k=>g[k].s),backgroundColor:'#6366f1',borderRadius:4}]},
    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:mob?0:45,autoSkip:true}},y:{stacked:true,grid:{color:'#eef1f7'},ticks:{callback:v=>nf.format(v/1e6)+' jt'}}},plugins:{legend:lg('bottom'),tooltip:{callbacks:{label:c=>c.dataset.label+': '+rp(c.parsed.y)}}}}}));
   // chart 2
@@ -849,7 +850,7 @@ function renderFaktur(){
   const F=S.f;
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Daftar Hutang</h1><div class="sub">Faktur pajak masukan dari sheet “Faktur”</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportFaktur()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openFaktur()">${ic('plus')} Input Hutang Manual</button>`:''}${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportFaktur()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openFaktur()">${ic('plus')} Input Hutang Manual</button>`:''}${can.pay()?`<button class="btn sec" onclick="openRetur()">${ic('money')} Retur / Potongan</button>`:''}${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
   ${metaBanner()}
   <div class="panel">
    <div class="tools">
@@ -882,8 +883,8 @@ function filtered(){
 }
 function exportFaktur(){
   const a=filtered();
-  csv([['NPWP Supplier','Nama Supplier','Nomor E-Faktur','Tanggal','Masa Pajak','Tahun','Nota','Harga Jual','PPN','Total','Dibayar','Sisa','Jatuh Tempo','Status']].concat(
-   a.map(f=>[f.npwp,f.supplier,f.no,f.tgl,f.masa,f.tahun,f.nota,f.dpp,f.ppn,f.total,f.dibayar,f.sisa,f.jt,f.status])),'daftar-hutang.csv');
+  csv([['NPWP Supplier','Nama Supplier','Nomor E-Faktur','Tanggal','Masa Pajak','Tahun','Nota','Harga Jual','PPN','Total','Dibayar','Potongan','Sisa','Jatuh Tempo','Status']].concat(
+   a.map(f=>[f.npwp,f.supplier,f.no,f.tgl,f.masa,f.tahun,f.nota,f.dpp,f.ppn,f.total,f.dibayar,f.potongan||0,f.sisa,f.jt,f.status])),'daftar-hutang.csv');
 }
 function drawFaktur(){
   const F=S.f,a=filtered(),n=a.length,pages=Math.max(1,Math.ceil(n/F.size));
@@ -894,7 +895,7 @@ function drawFaktur(){
 
   $('fk').innerHTML=`
   <div class="tw"><table><thead><tr>${th('tgl','Tanggal')}${th('no','Nomor E-Faktur')}${th('supplier','Supplier')}${th('nota','Nota')}${th('masa','Masa Pajak')}${th('dpp','Harga Jual',1)}${th('ppn','PPN',1)}${th('total','Total',1)}${th('dibayar','Dibayar',1)}${th('sisa','Sisa',1)}${th('jt','Jatuh Tempo')}<th>Status</th></tr></thead>
-  <tbody>${rows.length?rows.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.tgl)}</td><td class="mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td>${esc(f.supplier)}</td><td>${esc(f.nota)||'<span class="sub">-</span>'}</td><td>${esc(f.masa)} ${esc(f.tahun)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td>${fd(f.jt)}</td><td>${badge(f)}</td></tr>`).join('')+totalRow:`<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>`}</tbody></table></div>
+  <tbody>${rows.length?rows.map(f=>`<tr class="clk" onclick="openDetail('${esc(f.no)}')"><td>${fd(f.tgl)}</td><td class="mono">${esc(f.no)}${f.manual?' <span class="badge b-gray">Manual</span>':''}</td><td>${esc(f.supplier)}</td><td>${esc(f.nota)||'<span class="sub">-</span>'}</td><td>${esc(f.masa)} ${esc(f.tahun)}</td><td class="r mono">${num(f.dpp)}</td><td class="r mono">${num(f.ppn)}</td><td class="r mono"><b>${num(f.total)}</b></td><td class="r mono">${num(f.dibayar)}${f.potongan?`<div class="sub">+ pot. ${num(f.potongan)}</div>`:''}</td><td class="r mono"><b>${num(f.sisa)}</b></td><td>${fd(f.jt)}</td><td>${badge(f)}</td></tr>`).join('')+totalRow:`<tr><td colspan="12" class="empty">Tidak ada data yang cocok dengan filter.</td></tr>`}</tbody></table></div>
   <div class="mcards">${rows.length?rows.map(f=>`<div class="mc" onclick="openDetail('${esc(f.no)}')"><div class="mc1"><b>${esc(f.supplier)}</b><span>${num(f.sisa)}</span></div><div class="mc2">${esc(f.nota)||'tanpa nota'} · ${fd(f.tgl)} · JT ${fd(f.jt)}</div><div class="mc3"><span>${badge(f)}</span><span class="sub">Total ${num(f.total)}</span></div></div>`).join(''):'<div class="empty">Tidak ada data yang cocok dengan filter.</div>'}<div class="mtot">Total sisa (${n} faktur): <b>${rp(sum(a,'sisa'))}</b></div></div>
   <div class="pg"><div>Menampilkan ${n?st+1:0}–${Math.min(st+F.size,n)} dari ${n} data</div>
    <div class="pb"><select class="inp" style="width:auto;padding:6px 8px" onchange="S.f.size=+this.value;S.f.page=1;drawFaktur()">${[10,25,50,100].map(x=>`<option ${F.size===x?'selected':''}>${x}</option>`).join('')}</select>
@@ -905,7 +906,8 @@ function drawFaktur(){
 function openDetail(no){
   const f=S.map[no];if(!f)return;
   const pays=S.data.payments.filter(p=>p.no===no).sort((a,b)=>a.tgl.localeCompare(b.tgl));
-  const pct=f.total?Math.min(100,Math.round(f.dibayar/f.total*100)):0;
+  const pct=f.total?Math.min(100,Math.round((f.dibayar+(f.potongan||0))/f.total*100)):0;
+  const pots=(S.data.potongan||[]).filter(p=>p.no===no).sort((a,b)=>a.tgl.localeCompare(b.tgl));
   $('drawer').innerHTML=`
   <div class="dr-h"><h3>Detail Faktur</h3><button onclick="closeAll()">${ic('x')}</button></div>
   <div class="dr-b">
@@ -925,11 +927,14 @@ function openDetail(no){
     <div class="row"><span>PPN</span><span>${rp(f.ppn)}</span></div>
     <div class="row"><span>Total Tagihan</span><b>${rp(f.total)}</b></div>
     <div class="row"><span>Telah Dibayar</span><span style="color:var(--ok)">− ${rp(f.dibayar)}</span></div>
+    ${f.potongan?`<div class="row"><span>Retur / Potongan</span><span style="color:var(--ok)">− ${rp(f.potongan)}</span></div>`:''}
     <div class="row big"><span>Sisa Hutang</span><span>${rp(f.sisa)}</span></div>
     <div class="prog" style="margin-top:10px"><i style="width:${pct}%"></i></div><div class="sub" style="margin-top:4px">${pct}% terbayar</div>
    </div>
    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Riwayat Pembayaran</b>${can.pay()&&f.sisa>=1?`<button class="btn acc sm" onclick="openPay('${esc(no)}')">${ic('plus')} Bayar</button>`:''}</div>
    ${pays.length?`<div class="tw" style="max-height:none"><table><thead><tr><th>Tanggal</th><th>Metode</th><th class="r">Jumlah</th></tr></thead><tbody>${pays.map(p=>`<tr><td>${fd(p.tgl)}<div class="sub">${esc(p.ref)||''}</div></td><td>${esc(p.metode)}</td><td class="r mono">${num(p.jumlah)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty" style="padding:20px">Belum ada pembayaran.</div>'}
+   <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 8px"><b>Retur / Potongan</b>${can.pay()&&f.sisa>=1?`<button class="btn sec sm" onclick="openRetur('${esc(no)}')">${ic('plus')} Tambah</button>`:''}</div>
+   ${pots.length?`<div class="tw" style="max-height:none"><table><thead><tr><th>Tanggal</th><th>Jenis</th><th class="r">Jumlah</th></tr></thead><tbody>${pots.map(p=>`<tr><td>${fd(p.tgl)}<div class="sub">${esc(p.dok)||''}</div></td><td>${esc(p.jenis)}</td><td class="r mono">${num(p.jumlah)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty" style="padding:20px">Belum ada retur / potongan.</div>'}
   </div>`;
   hydrateIcons($('drawer'));
   $('drawer').classList.add('on');$('scrim').classList.add('on');
@@ -1012,7 +1017,7 @@ function pickPay(no){
   $('pNo').value=(f.nota||'(tanpa nota)')+' · '+f.supplier;
   hidePayList();
   const b=$('pInfo');b.classList.remove('hidden');
-  b.innerHTML=`<b>Nota: ${esc(f.nota)||'-'}</b> · ${esc(f.supplier)}<br>E-Faktur ${esc(f.no)} · ${fd(f.tgl)} · Jatuh tempo ${fd(f.jt)}<br>Total ${rp(f.total)} · Dibayar ${rp(f.dibayar)} · <b>Sisa ${rp(f.sisa)}</b>`;
+  b.innerHTML=`<b>Nota: ${esc(f.nota)||'-'}</b> · ${esc(f.supplier)}<br>E-Faktur ${esc(f.no)} · ${fd(f.tgl)} · Jatuh tempo ${fd(f.jt)}<br>Total ${rp(f.total)} · Dibayar ${rp(f.dibayar)}${f.potongan?' · Potongan '+rp(f.potongan):''} · <b>Sisa ${rp(f.sisa)}</b>`;
   $('pJml').value=Math.round(f.sisa).toLocaleString('id-ID');
   const k=$('pKet'),auto='Pembayaran nota '+(f.nota||f.no);
   if(!k.value||k.value===S._autoKet)k.value=auto;
@@ -1122,7 +1127,7 @@ function supplierRows(){
   const m={};
   S.data.faktur.forEach(f=>{
     const s=m[f.supplier]=m[f.supplier]||{n:f.supplier,npwp:f.npwp,c:0,open:0,t:0,p:0,s:0,od:0,jt:''};
-    s.c++;s.t+=f.total;s.p+=f.dibayar;s.s+=f.sisa;
+    s.c++;s.t+=f.total;s.p+=f.dibayar+(f.potongan||0);s.s+=f.sisa;
     if(f.sisa>=1){s.open++;if(f.umur>0)s.od+=f.sisa;if(!s.jt||f.jt<s.jt)s.jt=f.jt}
   });
   return Object.values(m);
@@ -1135,11 +1140,11 @@ function renderSupplier(){
   drawSupplier();
 }
 function sFiltered(){const q=S.sq.toLowerCase();return supplierRows().filter(s=>!q||(s.n+' '+s.npwp).toLowerCase().includes(q)).sort((a,b)=>b.s-a.s)}
-function exportSupplier(){csv([['Supplier','NPWP','Jumlah Faktur','Belum Lunas','Total Tagihan','Dibayar','Sisa','Sisa Lewat Jatuh Tempo']].concat(sFiltered().map(s=>[s.n,s.npwp,s.c,s.open,s.t,s.p,s.s,s.od])),'rekap-supplier.csv')}
+function exportSupplier(){csv([['Supplier','NPWP','Jumlah Faktur','Belum Lunas','Total Tagihan','Dibayar + Potongan','Sisa','Sisa Lewat Jatuh Tempo']].concat(sFiltered().map(s=>[s.n,s.npwp,s.c,s.open,s.t,s.p,s.s,s.od])),'rekap-supplier.csv')}
 function toSupplier(n){S.f.supplier=n;S.f.status='';S.f.q='';S.f.periode='';S.f.page=1;go('faktur')}
 function drawSupplier(){
   const a=sFiltered();
-  $('sp').innerHTML=`<div class="tw"><table><thead><tr><th>Supplier</th><th>NPWP</th><th class="r">Faktur</th><th class="r">Belum Lunas</th><th class="r">Total Tagihan</th><th class="r">Dibayar</th><th class="r">Sisa Hutang</th><th class="r">Lewat Jatuh Tempo</th><th>JT Terdekat</th><th class="noprint"></th></tr></thead>
+  $('sp').innerHTML=`<div class="tw"><table><thead><tr><th>Supplier</th><th>NPWP</th><th class="r">Faktur</th><th class="r">Belum Lunas</th><th class="r">Total Tagihan</th><th class="r">Dibayar / Potongan</th><th class="r">Sisa Hutang</th><th class="r">Lewat Jatuh Tempo</th><th>JT Terdekat</th><th class="noprint"></th></tr></thead>
   <tbody>${a.length?a.map(s=>`<tr class="clk" onclick="toSupplier(this.dataset.n)" data-n="${esc(s.n)}"><td><b>${esc(s.n)}</b></td><td class="mono">${esc(s.npwp)||'-'}</td><td class="r">${s.c}</td><td class="r">${s.open}</td><td class="r mono">${num(s.t)}</td><td class="r mono">${num(s.p)}</td><td class="r mono"><b>${num(s.s)}</b></td><td class="r mono" style="color:${s.od?'var(--bad)':'inherit'}">${num(s.od)}</td><td>${s.jt?fd(s.jt):'<span class="badge b-ok">Lunas</span>'}</td><td class="noprint" style="text-align:right"><button class="btn sec sm" title="Kartu hutang supplier ini" onclick="event.stopPropagation();openKartu(this.closest('tr').dataset.n)">${ic('book')} Kartu</button></td></tr>`).join(''):'<tr><td colspan="10" class="empty">Tidak ada data.</td></tr>'}</tbody>
   <tfoot><tr><td colspan="2">Total (${a.length} supplier)</td><td class="r">${sum(a,'c')}</td><td class="r">${sum(a,'open')}</td><td class="r mono">${num(sum(a,'t'))}</td><td class="r mono">${num(sum(a,'p'))}</td><td class="r mono">${num(sum(a,'s'))}</td><td class="r mono">${num(sum(a,'od'))}</td><td></td><td class="noprint"></td></tr></tfoot></table></div>`;
 }
@@ -1152,7 +1157,11 @@ function kartuRows(name){
   fk.forEach(f=>e.push({tgl:f.tgl||'',o:0,id:f.no,ket:'Tagihan'+(f.manual?' (manual)':''),nota:f.nota,no:f.no,d:f.total,k:0}));
   S.data.payments.filter(p=>nos.has(p.no)).forEach(p=>{
     const f=S.map[p.no]||{};
-    e.push({tgl:p.tgl||'',o:1,id:p.id,ket:'Pembayaran '+p.metode+(p.ref?' · '+p.ref:'')+(p.ket&&p.metode!=='Selisih'?' · '+p.ket:''),nota:f.nota,no:p.no,d:0,k:p.jumlah});
+    e.push({tgl:p.tgl||'',o:1,id:p.id,t:'p',ket:'Pembayaran '+p.metode+(p.ref?' · '+p.ref:'')+(p.ket&&p.metode!=='Selisih'?' · '+p.ket:''),nota:f.nota,no:p.no,d:0,k:p.jumlah});
+  });
+  (S.data.potongan||[]).filter(p=>nos.has(p.no)).forEach(p=>{
+    const f=S.map[p.no]||{};
+    e.push({tgl:p.tgl||'',o:1,id:p.id,t:'r',ket:'Retur/Potongan '+p.jenis+(p.dok?' · '+p.dok:'')+(p.ket?' · '+p.ket:''),nota:f.nota,no:p.no,d:0,k:p.jumlah});
   });
   e.sort((a,b)=>a.tgl.localeCompare(b.tgl)||a.o-b.o||String(a.id).localeCompare(String(b.id)));
   let sal=0;e.forEach(x=>{sal=Math.round((sal+x.d-x.k)*100)/100;x.s=sal});
@@ -1172,10 +1181,10 @@ function drawKartu(){
   const sup=S.data.suppliers.find(s=>supMatch(s,{supplier:n,npwp:(fk[0]||{}).npwp}));
   const npwp=(fk[0]&&fk[0].npwp)||(sup&&sup.npwp)||'';
   $('ktSub').textContent=n+(npwp?' · NPWP '+npwp:'')+' · per '+fd(S.data.meta.today);
-  const td=sum(e,'d'),tk=sum(e,'k'),sal=Math.round((td-tk)*100)/100;
+  const td=sum(e,'d'),tk=sum(e,'k'),tkr=e.filter(x=>x.t==='r').reduce((a,x)=>a+x.k,0),sal=Math.round((td-tk)*100)/100;
   $('kt').innerHTML=`
-  <div class="kpis" style="padding:14px 18px 0">${kpi('c-blue','file','Total Tagihan',rp0(td),fk.length+' faktur')}${kpi('c-green','check','Total Dibayar',rp0(tk))}${kpi('c-amber','money','Saldo Hutang',rp0(sal))}</div>
-  <div class="tw"><table><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Nota</th><th>Nomor E-Faktur</th><th class="r">Tagihan</th><th class="r">Pembayaran</th><th class="r">Saldo</th></tr></thead>
+  <div class="kpis" style="padding:14px 18px 0">${kpi('c-blue','file','Total Tagihan',rp0(td),fk.length+' faktur')}${kpi('c-green','check','Total Dibayar',rp0(tk-tkr))}${tkr?kpi('c-gray','layers','Retur / Potongan',rp0(tkr)):''}${kpi('c-amber','money','Saldo Hutang',rp0(sal))}</div>
+  <div class="tw"><table><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Nota</th><th>Nomor E-Faktur</th><th class="r">Tagihan</th><th class="r">Pembayaran / Potongan</th><th class="r">Saldo</th></tr></thead>
   <tbody>${e.length?e.map(x=>`<tr><td>${fd(x.tgl)}</td><td>${esc(x.ket)}</td><td>${esc(x.nota)||'-'}</td><td class="mono">${esc(x.no)}</td><td class="r mono">${x.d?num(x.d):'<span class="sub">-</span>'}</td><td class="r mono">${x.k?num(x.k):'<span class="sub">-</span>'}</td><td class="r mono"><b>${num(x.s)}</b></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Tidak ada transaksi.</td></tr>'}</tbody>
   <tfoot><tr><td colspan="4">Total (${e.length} transaksi)</td><td class="r mono">${num(td)}</td><td class="r mono">${num(tk)}</td><td class="r mono">${num(sal)}</td></tr></tfoot></table></div>`;
 }
@@ -1416,7 +1425,7 @@ function openEditPay(id){
   if(!p||!f)return toast('Data pembayaran tidak ditemukan','err');
   const sl=S.data.payments.find(x=>x.id===base+'-S');
   const paidOther=Math.round((f.dibayar-p.jumlah-(sl?sl.jumlah:0))*100)/100;
-  S._ep={id:base,sisa:Math.round((f.total-paidOther)*100)/100,hadSel:!!sl};
+  S._ep={id:base,sisa:Math.round((f.total-(f.potongan||0)-paidOther)*100)/100,hadSel:!!sl};
   const mets=['Transfer','Tunai','Giro','Cek','Lainnya'];if(p.metode&&!mets.includes(p.metode))mets.push(p.metode);
   $('modal').innerHTML=`
   <div class="mh"><h3>Ubah Pembayaran</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
@@ -1477,6 +1486,99 @@ async function delPay(id){
   if(!confirm('Hapus pembayaran ini? Sisa hutang faktur akan bertambah kembali. Jika pembayaran ini punya baris selisih, baris itu ikut dihapus.'))return;
   busy(true);
   try{await api('deletePayment',{id:id});toast('Pembayaran dihapus');await reload(true)}catch(e){toast(e.message,'err')}
+  busy(false);
+}
+
+/* ====================== RETUR & POTONGAN ====================== */
+const JENIS=['Retur Barang','Potongan Harga','Diskon','Nota Kredit','Lainnya'];
+function openRetur(no){
+  if(!can.pay())return toast('Anda tidak memiliki hak mencatat retur / potongan','err');
+  const f=no?S.map[no]:null;
+  $('modal').innerHTML=`
+  <div class="mh"><h3>Catat Retur / Potongan</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
+  <div class="mb">
+   <div class="fg"><label>Nomor Nota (tagihan yang dikurangi)</label>
+    <div style="position:relative">
+     <input class="inp" id="rNo" placeholder="Ketik nomor Nota, nama supplier, atau nomor e-faktur..." ${f?'readonly':''} oninput="onReturSearch()" onfocus="showReturList()" onblur="setTimeout(hideReturList,150)" autocomplete="off">
+     <div class="cbx hidden" id="rList"></div>
+    </div>
+    <div class="infobox hidden" id="rInfo"></div></div>
+   <div class="row2">
+    <div class="fg"><label>Tanggal</label>${dateField('rTgl',S.data.meta.today)}</div>
+    <div class="fg"><label>Jenis</label><select class="inp" id="rJenis">${JENIS.map(j=>`<option>${j}</option>`).join('')}</select></div>
+   </div>
+   <div class="fg"><label>Jumlah Potongan (Rp)</label>
+    <div style="display:flex;gap:8px"><input class="inp" id="rJml" inputmode="numeric" placeholder="0" oninput="fmtMoney(this)"><button type="button" class="btn sec" onclick="returFull()">Seluruh Sisa</button></div>
+    <div class="hint">Mengurangi sisa hutang tanpa dihitung sebagai uang yang dibayar.</div></div>
+   <div class="fg"><label>No. Dokumen (nota retur / nota kredit)</label><input class="inp" id="rDok"></div>
+   <div class="fg" style="margin-bottom:0"><label>Keterangan</label><input class="inp" id="rKet"></div>
+  </div>
+  <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="rBtn" onclick="submitRetur()">${ic('check')} Simpan</button></div>`;
+  hydrateIcons($('modal'));$('modal').classList.add('on');$('scrim').classList.add('on');
+  S._rNo='';
+  if(f)pickRetur(f.no);
+}
+function drawReturList(q){
+  const l=$('rList'),a=payOptions(q);
+  l.innerHTML=a.length?a.map(x=>`<div class="opt" onmousedown="pickRetur('${esc(x.no)}')"><div class="o1"><b>${esc(x.nota)||'(tanpa nota)'}</b><span>${num(x.sisa)}</span></div><div class="o2">${esc(x.supplier)}</div><div class="o3">E-Faktur ${esc(x.no)} · ${fd(x.tgl)}</div></div>`).join(''):'<div class="opt sub">Tidak ada faktur belum lunas yang cocok</div>';
+  l.classList.remove('hidden');
+}
+function showReturList(){const el=$('rNo');if(!el||el.readOnly)return;if(S._rNo)el.select();drawReturList(S._rNo?'':el.value)}
+function hideReturList(){const l=$('rList');if(l)l.classList.add('hidden')}
+function onReturSearch(){
+  const v=$('rNo').value;S._rNo='';$('rInfo').classList.add('hidden');
+  const f=S.map[v.trim()];
+  if(f&&f.sisa>=1){pickRetur(f.no);return}
+  drawReturList(v);
+}
+function pickRetur(no){
+  const f=S.map[no];if(!f)return;
+  S._rNo=no;
+  $('rNo').value=(f.nota||'(tanpa nota)')+' · '+f.supplier;
+  hideReturList();
+  const b=$('rInfo');b.classList.remove('hidden');
+  b.innerHTML=`<b>Nota: ${esc(f.nota)||'-'}</b> · ${esc(f.supplier)}<br>E-Faktur ${esc(f.no)} · ${fd(f.tgl)}<br>Total ${rp(f.total)} · Dibayar ${rp(f.dibayar)}${f.potongan?' · Potongan '+rp(f.potongan):''} · <b>Sisa ${rp(f.sisa)}</b>`;
+}
+function returFull(){const f=S.map[S._rNo];if(!f)return toast('Pilih nota / faktur terlebih dahulu','err');$('rJml').value=Math.round(f.sisa).toLocaleString('id-ID')}
+async function submitRetur(){
+  const no=S._rNo,f=S.map[no],jml=parseInt(($('rJml').value||'').replace(/\D/g,''),10)||0;
+  if(!f)return toast('Pilih Nota / faktur dari daftar terlebih dahulu','err');
+  if(f.sisa<1)return toast('Faktur ini sudah lunas','err');
+  const tg=dmy2iso($('rTgl').value);if(!tg)return toast('Tanggal harus berformat dd-mm-yyyy','err');
+  if(jml<=0)return toast('Jumlah potongan wajib diisi','err');
+  if(jml>f.sisa+1)return toast('Jumlah melebihi sisa hutang ('+rp(f.sisa)+')','err');
+  const b=$('rBtn');b.disabled=true;
+  try{
+    await api('addPotongan',{no:no,tgl:tg,jumlah:jml,jenis:$('rJenis').value,dok:$('rDok').value,ket:$('rKet').value});
+    toast($('rJenis').value+' '+rp(jml)+' berhasil dicatat');
+    const wasDrawer=$('drawer').classList.contains('on');
+    closeModal();await reload(true);
+    if(wasDrawer)openDetail(no);
+  }catch(e){toast(e.message,'err');b.disabled=false}
+}
+function renderPotongan(){
+  $('pg').innerHTML=`
+  <div class="ph"><div><h1>Retur & Potongan</h1><div class="sub">Pengurang tagihan yang bukan pembayaran (retur barang, diskon, nota kredit)</div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportPotongan()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()">${ic('download')} Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn acc" onclick="openRetur()">${ic('plus')} Catat Retur / Potongan</button>`:''}</div></div>
+  <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier, nota, jenis, dokumen..." value="${esc(S.ptq)}" oninput="S.ptq=this.value;drawPotongan()"></div></div><div id="pt"></div></div>`;
+  drawPotongan();
+}
+function ptFiltered(){
+  const q=(S.ptq||'').toLowerCase();
+  return (S.data.potongan||[]).filter(p=>!q||(p.supplier+' '+p.no+' '+p.jenis+' '+p.dok+' '+p.ket+' '+p.id+' '+((S.map[p.no]||{}).nota||'')).toLowerCase().includes(q))
+    .sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.id.localeCompare(a.id));
+}
+function exportPotongan(){csv([['ID','Tanggal','Nota','Nomor E-Faktur','Supplier','Jenis','No Dokumen','Keterangan','Jumlah','Dibuat Oleh']].concat(ptFiltered().map(p=>[p.id,p.tgl,(S.map[p.no]||{}).nota||'',p.no,p.supplier,p.jenis,p.dok,p.ket,p.jumlah,p.oleh])),'retur-potongan.csv')}
+function drawPotongan(){
+  const a=ptFiltered();
+  $('pt').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Jenis</th><th>No. Dokumen</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.admin()?'<th class="noprint"></th>':''}</tr></thead>
+  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc((S.map[p.no]||{}).supplier||p.supplier)}</td><td>${esc(p.jenis)}</td><td>${esc(p.dok)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.admin()?`<td class="noprint"><button class="btn danger sm" onclick="delPot('${esc(p.id)}')">${ic('trash')}</button></td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada retur / potongan tercatat.</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.admin()?2:1}"></td></tr></tfoot></table></div>`;
+}
+async function delPot(id){
+  if(!confirm('Hapus retur / potongan ini? Sisa hutang faktur akan bertambah kembali.'))return;
+  busy(true);
+  try{await api('deletePotongan',{id:id});toast('Retur / potongan dihapus');await reload(true)}catch(e){toast(e.message,'err')}
   busy(false);
 }
 
