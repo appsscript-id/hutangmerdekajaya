@@ -409,7 +409,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 
@@ -595,22 +595,23 @@ function playWelcome(){
     const t0=ac.currentTime+0.05,DUR=8;
     const master=ac.createGain();
     master.gain.setValueAtTime(0.0001,t0);
-    master.gain.exponentialRampToValueAtTime(0.5,t0+1.5);   // masuk perlahan
-    master.gain.setValueAtTime(0.5,t0+DUR-2.5);
+    master.gain.exponentialRampToValueAtTime(0.9,t0+1.2);   // masuk perlahan
+    master.gain.setValueAtTime(0.9,t0+DUR-2.5);
     master.gain.exponentialRampToValueAtTime(0.0001,t0+DUR); // menghilang lembut
-    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;
-    master.connect(lp);lp.connect(ac.destination);
+    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;
+    const comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=6;comp.connect(ac.destination);
+    master.connect(lp);lp.connect(comp);
     // gema lembut
     const dl=ac.createDelay(1);dl.delayTime.value=0.38;
     const fb=ac.createGain();fb.gain.value=0.35;
     const wet=ac.createGain();wet.gain.value=0.4;
-    lp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(ac.destination);
+    lp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(comp);
     // pad akor Cmaj9 (C3 G3 E4 B4) yang hangat
     [130.81,196.00,329.63,493.88].forEach((f,i)=>{
       [-4,4].forEach(det=>{
         const o=ac.createOscillator(),g=ac.createGain();
         o.type='sine';o.frequency.value=f;o.detune.value=det;
-        g.gain.value=0.11/(1+i*0.25);
+        g.gain.value=0.17/(1+i*0.25);
         o.connect(g);g.connect(master);o.start(t0);o.stop(t0+DUR+0.1);
       });
     });
@@ -621,7 +622,7 @@ function playWelcome(){
       const o=ac.createOscillator(),g=ac.createGain();
       o.type='triangle';o.frequency.value=f;
       g.gain.setValueAtTime(0.0001,t);
-      g.gain.exponentialRampToValueAtTime(0.09,t+0.04);
+      g.gain.exponentialRampToValueAtTime(0.2,t+0.04);
       g.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
       o.connect(g);g.connect(master);o.start(t);o.stop(t+1.7);
     });
