@@ -940,7 +940,7 @@ function openPay(no){
    <div class="fg" style="margin-bottom:0"><label>Jumlah Dibayar (Rp)</label>
     <div style="display:flex;gap:8px"><input class="inp" id="pJml" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);selInfo()"><button type="button" class="btn sec" onclick="payFull()">Bayar Penuh</button></div>
     <div class="infobox hidden" id="pSel"></div>
-    <label class="chk hidden" id="pLunasW"><input type="checkbox" id="pLunas"><span>Lunasi faktur ini, selisih dicatat sebagai penyesuaian</span></label></div>
+    <label class="chk hidden" id="pLunasW"><input type="checkbox" id="pLunas"><span id="pLunasTx">Lunasi faktur ini, selisih dicatat sebagai penyesuaian</span></label></div>
    <div class="fg" style="margin-top:16px"><label>No. Referensi / Bukti Transfer</label><input class="inp" id="pRef"></div>
    <div class="fg" style="margin-bottom:0"><label>Keterangan</label><input class="inp" id="pKet"></div>
   </div>
@@ -957,13 +957,17 @@ function maxSelisih(){const v=S.data&&S.data.settings&&S.data.settings.max_selis
 function selInfo(){
   const b=$('pSel'),w=$('pLunasW');if(!b||!w)return;
   const f=S.map[S._payNo],jml=getMoney();
-  const sel=f?Math.round((f.sisa-jml)*100)/100:0;
-  if(f&&jml>0&&sel>=1){
-    const ok=sel<=maxSelisih();
+  const sel=f?Math.round((f.sisa-jml)*100)/100:0;   // + kurang bayar, - lebih bayar
+  const lb=$('pLunasTx');
+  if(f&&jml>0&&Math.abs(sel)>=1){
+    const kurang=sel>0,abs=Math.abs(sel),ok=abs<=maxSelisih();
     b.classList.remove('hidden');
-    b.innerHTML='Selisih <b>'+rp(sel)+'</b>. '+(ok?'Centang opsi di bawah untuk melunasi faktur ini, atau biarkan kosong agar sisanya tetap menjadi hutang.':'Melebihi batas penyesuaian ('+rp(maxSelisih())+'), sisa tetap menjadi hutang.');
+    b.innerHTML=(kurang?'Kurang bayar ':'Kelebihan bayar ')+'<b>'+rp(abs)+'</b>. '+(ok
+      ?(kurang?'Centang opsi di bawah untuk melunasi faktur ini, atau biarkan kosong agar sisanya tetap menjadi hutang.':'Kelebihan akan dicatat sebagai selisih (penyesuaian) dan faktur dilunasi.')
+      :'Melebihi batas penyesuaian ('+rp(maxSelisih())+')'+(kurang?', sisa tetap menjadi hutang.':'. Kurangi jumlah pembayaran.'));
+    if(lb)lb.textContent=kurang?'Lunasi faktur ini, selisih dicatat sebagai penyesuaian':'Catat kelebihan sebagai selisih (penyesuaian)';
     w.classList.toggle('hidden',!ok);
-    if(!ok)$('pLunas').checked=false;
+    if(!ok)$('pLunas').checked=false;else if(!kurang)$('pLunas').checked=true;
   }else{
     b.classList.add('hidden');w.classList.add('hidden');$('pLunas').checked=false;
   }
@@ -1007,13 +1011,14 @@ async function submitPay(){
   const tg=dmy2iso($('pTgl').value);
   if(!tg)return toast('Tanggal bayar harus berformat dd-mm-yyyy','err');
   if(jml<=0)return toast('Jumlah pembayaran wajib diisi','err');
-  if(jml>f.sisa+1)return toast('Jumlah melebihi sisa hutang ('+rp(f.sisa)+')','err');
   const sel=Math.round((f.sisa-jml)*100)/100;
-  const lunasi=$('pLunas').checked&&sel>=1&&sel<=maxSelisih();
+  if(sel<=-1&&-sel>maxSelisih())return toast('Jumlah melebihi sisa hutang ('+rp(f.sisa)+'), kelebihan di atas batas penyesuaian '+rp(maxSelisih()),'err');
+  if(sel<=-1&&!$('pLunas').checked)return toast('Jumlah melebihi sisa hutang. Centang opsi untuk mencatat kelebihan sebagai selisih','err');
+  const lunasi=$('pLunas').checked&&Math.abs(sel)>=1&&Math.abs(sel)<=maxSelisih();
   const b=$('pBtn');b.disabled=true;
   try{
     await api('addPayment',{no:no,tgl:tg,jumlah:jml,lunasi:lunasi,metode:$('pMet').value,ref:$('pRef').value,ket:$('pKet').value});
-    toast('Pembayaran '+rp(jml)+' berhasil dicatat'+(lunasi?' (selisih '+rp(sel)+' dilunasi)':''));
+    toast('Pembayaran '+rp(jml)+' berhasil dicatat'+(lunasi?' (selisih '+rp(Math.abs(sel))+(sel<0?' kelebihan':' dilunasi')+')':''));
     const wasDrawer=$('drawer').classList.contains('on');
     closeModal();await reload(true);
     if(wasDrawer)openDetail(no);
