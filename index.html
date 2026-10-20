@@ -566,7 +566,7 @@ function busy(v){$('busy').classList.toggle('hidden',!v)}
 /* ====================== STATE & API ====================== */
 const S={token:null,user:null,data:null,map:{},charts:[],page:'dashboard',
   f:{q:'',status:'',periode:'',supplier:'',sort:'tgl',dir:'desc',page:1,size:25},
-  sq:'',pq:'',bf:'',bt:'',kn:''};
+  sq:'',pq:'',bf:'',bt:'',kn:'',pdel:new Set()};
 const can={pay:()=>S.user&&['admin','staf'].includes(S.user.role),admin:()=>S.user&&S.user.role==='admin'};
 
 async function api(action,payload){
@@ -1264,13 +1264,14 @@ async function syncSup(){
 
 /* ====================== RIWAYAT PEMBAYARAN ====================== */
 function renderBayar(){
+  S.pdel=new Set();
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Riwayat Pembayaran</h1><div class="sub" id="bySub">Semua pembayaran yang tercatat di sheet “Pembayaran”</div></div>
    <div class="acts noprint"><button class="btn sec" onclick="exportBayar()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()">${ic('download')} Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
   <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier, nomor faktur, referensi..." value="${esc(S.pq)}" oninput="S.pq=this.value;drawBayar()"></div>
    <div style="flex:0 0 160px"><div class="sub" style="margin-bottom:3px">Dari tanggal</div>${dateField('byF',dmy2iso(S.bf))}</div>
    <div style="flex:0 0 160px"><div class="sub" style="margin-bottom:3px">Sampai tanggal</div>${dateField('byT',dmy2iso(S.bt))}</div>
-   <button class="btn ghost" onclick="S.bf='';S.bt='';S.pq='';renderBayar()">Reset</button></div><div id="by"></div></div>`;
+   <button class="btn ghost" onclick="S.bf='';S.bt='';S.pq='';renderBayar()">Reset</button></div><div id="byBar" class="noprint"></div><div id="by"></div></div>`;
   [['byF','bf'],['byT','bt']].forEach(([id,k])=>{
     const sync=()=>{S[k]=$(id).value;drawBayar()};
     $(id).addEventListener('input',sync);$(id+'_p').addEventListener('change',()=>setTimeout(sync,0));
@@ -1283,9 +1284,34 @@ function drawBayar(){
   const a=bFiltered();
   const sb=$('bySub'),df=dmy2iso(S.bf),dt=dmy2iso(S.bt);
   if(sb)sb.textContent=(df||dt)?'Periode: '+(df?fd(df):'awal')+' s/d '+(dt?fd(dt):'sekarang')+(S.pq?' · Pencarian: "'+S.pq+'"':''):'Semua pembayaran yang tercatat di sheet “Pembayaran”'+(S.pq?' · Pencarian: "'+S.pq+'"':'');
-  $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.pay()?'<th class="noprint"></th>':''}</tr></thead>
-  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.pay()?`<td class="noprint" style="white-space:nowrap">${/-S$/.test(p.id)?'':`<button class="btn sec sm" title="Ubah pembayaran" onclick="openEditPay('${esc(p.id)}')">${ic('edit')}</button> `}${can.admin()?`<button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button>`:''}</td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.pay()?2:1}"></td></tr></tfoot></table></div>`;
+  $('by').innerHTML=`<div class="tw"><table><thead><tr>${can.admin()?'<th class="noprint"><input type="checkbox" id="byAll" title="Pilih semua" onchange="byAll(this)"></th>':''}<th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.pay()?'<th class="noprint"></th>':''}</tr></thead>
+  <tbody>${a.length?a.map(p=>`<tr>${can.admin()?`<td class="noprint">${/-S$/.test(p.id)?'':`<input type="checkbox" class="byc" data-id="${esc(p.id)}" ${S.pdel.has(p.id)?'checked':''} onchange="byToggle(this)">`}</td>`:''}<td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.pay()?`<td class="noprint" style="white-space:nowrap">${/-S$/.test(p.id)?'':`<button class="btn sec sm" title="Ubah pembayaran" onclick="openEditPay('${esc(p.id)}')">${ic('edit')}</button> `}${can.admin()?`<button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button>`:''}</td>`:''}</tr>`).join(''):`<tr><td colspan="${can.admin()?12:11}" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="${can.admin()?9:8}">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.pay()?2:1}"></td></tr></tfoot></table></div>`;
+  const vis=new Set(a.map(x=>x.id));S.pdel=new Set([...S.pdel].filter(id=>vis.has(id)));
+  byBar();
+}
+function byIds(){return bFiltered().filter(p=>!/-S$/.test(p.id)).map(p=>p.id)}
+function byBar(){
+  const bar=$('byBar');if(!bar||!can.admin())return;
+  const n=S.pdel.size,all=byIds();
+  bar.innerHTML=n?`<div class="banner" style="margin:0;border-radius:0;border-left:0;border-right:0;justify-content:space-between;flex-wrap:wrap"><span><b>${n}</b> pembayaran dipilih</span><span style="display:flex;gap:6px"><button class="btn ghost sm" onclick="byClear()">Batal pilih</button><button class="btn danger sm" onclick="delPayMulti()">${ic('trash')} Hapus Terpilih</button></span></div>`:'';
+  const h=$('byAll');if(h){h.checked=!!all.length&&all.every(id=>S.pdel.has(id));h.indeterminate=n>0&&!h.checked}
+}
+function byToggle(el){const id=el.dataset.id;if(el.checked)S.pdel.add(id);else S.pdel.delete(id);byBar()}
+function byAll(el){
+  byIds().forEach(id=>{if(el.checked)S.pdel.add(id);else S.pdel.delete(id)});
+  document.querySelectorAll('#by .byc').forEach(c=>c.checked=S.pdel.has(c.dataset.id));
+  byBar();
+}
+function byClear(){S.pdel.clear();document.querySelectorAll('#by .byc').forEach(c=>c.checked=false);byBar()}
+async function delPayMulti(){
+  if(!can.admin())return toast('Hanya admin yang dapat menghapus pembayaran','err');
+  const ids=[...S.pdel];if(!ids.length)return toast('Pilih pembayaran yang akan dihapus','err');
+  const tot=S.data.payments.filter(p=>S.pdel.has(p.id)).reduce((s,p)=>s+p.jumlah,0);
+  if(!confirm('Hapus '+ids.length+' pembayaran terpilih (total '+rp(tot)+')?\nSisa hutang faktur terkait akan bertambah kembali. Baris selisih yang terkait ikut dihapus.'))return;
+  busy(true);
+  try{const j=await api('deletePaymentMulti',{ids:ids});S.pdel.clear();toast((j.count||ids.length)+' pembayaran dihapus');await reload(true)}catch(e){toast(e.message,'err')}
+  busy(false);
 }
 /* ====================== PEMBAYARAN MULTI TAGIHAN ====================== */
 function openPayMulti(){
