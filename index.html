@@ -409,7 +409,7 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
 /* ======================================================
    KONFIGURASI  —  tempel URL Web App Apps Script di sini
    ====================================================== */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.3.1';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxwwgDx2Db0HuiLshTrpt2sUOnnJ4pD5Ik3hcKvP3SO5YbCouqyQAh52TzmbaeW6zTo/exec';
 
 
@@ -1625,6 +1625,15 @@ function renderSet(){
    <button class="btn acc" id="instSet" onclick="installApp()">${ic('download')} Pasang Aplikasi</button>
    <div class="hint">Bisa dipasang di Android, iPhone, dan laptop agar dibuka seperti aplikasi biasa dari layar utama.</div>
   </div></div>
+  ${can.admin()?`<div class="panel" id="bkPanel"><div class="hd"><h3>Backup Otomatis</h3></div><div class="bd">
+   <div id="bkInfo"><span class="sub">Memuat status...</span></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+    <button class="btn" id="bkNow" onclick="backupNow()">${ic('download')} Backup Sekarang</button>
+    <button class="btn sec" onclick="loadBackup()">${ic('refresh')} Muat Ulang Status</button>
+   </div>
+   <div class="hint">Salinan spreadsheet disimpan di Google Drive pemilik spreadsheet, folder "Backup Hutang".</div>
+  </div></div>
+  `:''}
   <div class="panel"><div class="hd"><h3>Cara Memperbarui Data</h3></div><div class="bd"><div class="note">
    Data hutang dibaca langsung dari Google Spreadsheet:
    <ol>
@@ -1636,7 +1645,39 @@ function renderSet(){
    </ol></div></div></div>
   <div style="text-align:center;color:var(--mut);font-size:12.5px;padding:4px 0 10px"><div style="font-weight:600">Created By Furqon S</div><div>Versi ${APP_VERSION}</div></div>`;
   updateInstUI();
+  if(can.admin())loadBackup();
 }
+/* ====================== STATUS BACKUP ====================== */
+async function loadBackup(){
+  const el=$('bkInfo');if(!el)return;
+  el.innerHTML='<span class="sub">Memuat status...</span>';
+  try{
+    const b=(await api('backupInfo')).info;
+    drawBackup(b);
+  }catch(e){if($('bkInfo'))$('bkInfo').innerHTML='<div class="err" style="margin:0">'+esc(e.message)+'</div>'}
+}
+function drawBackup(b){
+  const el=$('bkInfo');if(!el)return;
+  const st=b.aktif===true?'<span class="badge b-ok">Aktif</span>':b.aktif===false?'<span class="badge b-warn">Belum terpasang</span>':'<span class="badge b-gray">Tidak diketahui</span>';
+  const gagal=/^Gagal|^Tidak dapat/.test(b.hasil||'');
+  el.innerHTML=`<div class="kv2" style="margin-bottom:0">
+   <div><div class="k">Status</div><div class="v">${st}</div></div>
+   <div><div class="k">Jadwal</div><div class="v">${esc(b.jadwal)}</div></div>
+   <div><div class="k">Backup terakhir</div><div class="v">${b.terakhir?esc(b.terakhir):'<span class="sub">Belum ada</span>'}</div></div>
+   <div><div class="k">Salinan tersimpan</div><div class="v">${b.jumlah} <span class="sub">(maks. ${b.simpan})</span></div></div>
+   ${b.hasil?`<div class="full"><div class="k">Hasil terakhir</div><div class="v" style="color:${gagal?'var(--bad)':'var(--ok)'}">${esc(b.hasil)}</div></div>`:''}
+   ${b.folderUrl?`<div class="full"><a class="btn sec sm" href="${esc(b.folderUrl)}" target="_blank" rel="noopener">${ic('file')} Buka folder di Google Drive</a></div>`:''}
+  </div>
+  ${b.aktif===false?'<div class="infobox">Backup otomatis belum terpasang. Di editor Apps Script, jalankan fungsi <b>pasangBackupMingguan</b> satu kali, lalu Deploy versi baru.</div>':''}`;
+}
+async function backupNow(){
+  const btn=$('bkNow');if(btn)btn.disabled=true;
+  busy(true);
+  try{const b=(await api('backupNow')).info;toast('Backup berhasil dibuat');drawBackup(b)}
+  catch(e){toast(e.message,'err');loadBackup()}
+  busy(false);if($('bkNow'))$('bkNow').disabled=false;
+}
+
 async function saveSet(){
   busy(true);
   try{await api('saveSettings',{nama_perusahaan:$('sNm').value,termin_default:$('sTr').value});toast('Pengaturan disimpan');await reload(true)}catch(e){toast(e.message,'err')}
