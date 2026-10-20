@@ -566,7 +566,7 @@ function busy(v){$('busy').classList.toggle('hidden',!v)}
 /* ====================== STATE & API ====================== */
 const S={token:null,user:null,data:null,map:{},charts:[],page:'dashboard',
   f:{q:'',status:'',periode:'',supplier:'',sort:'tgl',dir:'desc',page:1,size:25},
-  sq:'',pq:''};
+  sq:'',pq:'',bf:'',bt:'',kn:''};
 const can={pay:()=>S.user&&['admin','staf'].includes(S.user.role),admin:()=>S.user&&S.user.role==='admin'};
 
 async function api(action,payload){
@@ -653,12 +653,13 @@ const PAGES={
   supplier:{t:'Rekap Supplier',i:'users',r:()=>renderSupplier()},
   bayar:{t:'Riwayat Pembayaran',i:'card',r:()=>renderBayar()},
   aging:{t:'Umur Hutang (Aging)',i:'clock',r:()=>renderAging()},
+  kartu:{t:'Kartu Hutang',i:'file',hide:1,nav:'supplier',r:()=>renderKartu()},
   set:{t:'Pengaturan',i:'sliders',r:()=>renderSet()}
 };
 async function boot(){
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
   $('uNm').textContent=S.user.nama;$('uRl').textContent=S.user.role;$('avt').textContent=(S.user.nama||'A')[0].toUpperCase();
-  $('nav').innerHTML=Object.keys(PAGES).map(k=>`<a data-p="${k}" onclick="go('${k}')">${ic(PAGES[k].i)}<span>${PAGES[k].t}</span></a>`).join('');
+  $('nav').innerHTML=Object.keys(PAGES).filter(k=>!PAGES[k].hide).map(k=>`<a data-p="${k}" onclick="go('${k}')">${ic(PAGES[k].i)}<span>${PAGES[k].t}</span></a>`).join('');
   await reload(true);
 }
 async function reload(silent){
@@ -677,7 +678,7 @@ function route(){
   if(!S.data)return;
   let p=(location.hash.replace('#/','')||'dashboard');if(!PAGES[p])p='dashboard';
   S.page=p;killCharts();
-  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===(PAGES[p].nav||p)));
   $('view').innerHTML=`<div class="crumb">Beranda${p!=='dashboard'?' / <b>'+PAGES[p].t+'</b>':''}</div>`+'<div id="pg"></div>';
   PAGES[p].r();hydrateIcons($('view'));window.scrollTo(0,0);
 }
@@ -1138,9 +1139,49 @@ function exportSupplier(){csv([['Supplier','NPWP','Jumlah Faktur','Belum Lunas',
 function toSupplier(n){S.f.supplier=n;S.f.status='';S.f.q='';S.f.periode='';S.f.page=1;go('faktur')}
 function drawSupplier(){
   const a=sFiltered();
-  $('sp').innerHTML=`<div class="tw"><table><thead><tr><th>Supplier</th><th>NPWP</th><th class="r">Faktur</th><th class="r">Belum Lunas</th><th class="r">Total Tagihan</th><th class="r">Dibayar</th><th class="r">Sisa Hutang</th><th class="r">Lewat Jatuh Tempo</th><th>JT Terdekat</th></tr></thead>
-  <tbody>${a.length?a.map(s=>`<tr class="clk" onclick="toSupplier(this.dataset.n)" data-n="${esc(s.n)}"><td><b>${esc(s.n)}</b></td><td class="mono">${esc(s.npwp)||'-'}</td><td class="r">${s.c}</td><td class="r">${s.open}</td><td class="r mono">${num(s.t)}</td><td class="r mono">${num(s.p)}</td><td class="r mono"><b>${num(s.s)}</b></td><td class="r mono" style="color:${s.od?'var(--bad)':'inherit'}">${num(s.od)}</td><td>${s.jt?fd(s.jt):'<span class="badge b-ok">Lunas</span>'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">Tidak ada data.</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="2">Total (${a.length} supplier)</td><td class="r">${sum(a,'c')}</td><td class="r">${sum(a,'open')}</td><td class="r mono">${num(sum(a,'t'))}</td><td class="r mono">${num(sum(a,'p'))}</td><td class="r mono">${num(sum(a,'s'))}</td><td class="r mono">${num(sum(a,'od'))}</td><td></td></tr></tfoot></table></div>`;
+  $('sp').innerHTML=`<div class="tw"><table><thead><tr><th>Supplier</th><th>NPWP</th><th class="r">Faktur</th><th class="r">Belum Lunas</th><th class="r">Total Tagihan</th><th class="r">Dibayar</th><th class="r">Sisa Hutang</th><th class="r">Lewat Jatuh Tempo</th><th>JT Terdekat</th><th class="noprint"></th></tr></thead>
+  <tbody>${a.length?a.map(s=>`<tr class="clk" onclick="toSupplier(this.dataset.n)" data-n="${esc(s.n)}"><td><b>${esc(s.n)}</b></td><td class="mono">${esc(s.npwp)||'-'}</td><td class="r">${s.c}</td><td class="r">${s.open}</td><td class="r mono">${num(s.t)}</td><td class="r mono">${num(s.p)}</td><td class="r mono"><b>${num(s.s)}</b></td><td class="r mono" style="color:${s.od?'var(--bad)':'inherit'}">${num(s.od)}</td><td>${s.jt?fd(s.jt):'<span class="badge b-ok">Lunas</span>'}</td><td class="noprint" style="text-align:right"><button class="btn sec sm" title="Kartu hutang supplier ini" onclick="event.stopPropagation();openKartu(this.closest('tr').dataset.n)">${ic('book')} Kartu</button></td></tr>`).join(''):'<tr><td colspan="10" class="empty">Tidak ada data.</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="2">Total (${a.length} supplier)</td><td class="r">${sum(a,'c')}</td><td class="r">${sum(a,'open')}</td><td class="r mono">${num(sum(a,'t'))}</td><td class="r mono">${num(sum(a,'p'))}</td><td class="r mono">${num(sum(a,'s'))}</td><td class="r mono">${num(sum(a,'od'))}</td><td></td><td class="noprint"></td></tr></tfoot></table></div>`;
+}
+
+/* ====================== KARTU HUTANG PER SUPPLIER ====================== */
+function openKartu(n){S.kn=n;go('kartu')}
+function kartuRows(name){
+  const fk=S.data.faktur.filter(f=>f.supplier===name),nos=new Set(fk.map(f=>f.no));
+  const e=[];
+  fk.forEach(f=>e.push({tgl:f.tgl||'',o:0,id:f.no,ket:'Tagihan'+(f.manual?' (manual)':''),nota:f.nota,no:f.no,d:f.total,k:0}));
+  S.data.payments.filter(p=>nos.has(p.no)).forEach(p=>{
+    const f=S.map[p.no]||{};
+    e.push({tgl:p.tgl||'',o:1,id:p.id,ket:'Pembayaran '+p.metode+(p.ref?' · '+p.ref:'')+(p.ket&&p.metode!=='Selisih'?' · '+p.ket:''),nota:f.nota,no:p.no,d:0,k:p.jumlah});
+  });
+  e.sort((a,b)=>a.tgl.localeCompare(b.tgl)||a.o-b.o||String(a.id).localeCompare(String(b.id)));
+  let sal=0;e.forEach(x=>{sal=Math.round((sal+x.d-x.k)*100)/100;x.s=sal});
+  return e;
+}
+function renderKartu(){
+  const sups=suppliers();
+  if(!S.kn||!sups.includes(S.kn))S.kn=sups[0]||'';
+  $('pg').innerHTML=`
+  <div class="ph"><div><h1>Kartu Hutang</h1><div class="sub" id="ktSub"></div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="go('supplier')">‹ Rekap Supplier</button><button class="btn sec" onclick="exportKartu()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()">${ic('download')} Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button></div></div>
+  <div class="panel"><div class="tools"><select class="inp" style="max-width:100%;flex:1" onchange="S.kn=this.value;drawKartu()">${sups.map(n=>`<option ${n===S.kn?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div id="kt"></div></div>`;
+  drawKartu();
+}
+function drawKartu(){
+  const n=S.kn,e=kartuRows(n),fk=S.data.faktur.filter(f=>f.supplier===n);
+  const sup=S.data.suppliers.find(s=>supMatch(s,{supplier:n,npwp:(fk[0]||{}).npwp}));
+  const npwp=(fk[0]&&fk[0].npwp)||(sup&&sup.npwp)||'';
+  $('ktSub').textContent=n+(npwp?' · NPWP '+npwp:'')+' · per '+fd(S.data.meta.today);
+  const td=sum(e,'d'),tk=sum(e,'k'),sal=Math.round((td-tk)*100)/100;
+  $('kt').innerHTML=`
+  <div class="kpis" style="padding:14px 18px 0">${kpi('c-blue','file','Total Tagihan',rp0(td),fk.length+' faktur')}${kpi('c-green','check','Total Dibayar',rp0(tk))}${kpi('c-amber','money','Saldo Hutang',rp0(sal))}</div>
+  <div class="tw"><table><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Nota</th><th>Nomor E-Faktur</th><th class="r">Tagihan</th><th class="r">Pembayaran</th><th class="r">Saldo</th></tr></thead>
+  <tbody>${e.length?e.map(x=>`<tr><td>${fd(x.tgl)}</td><td>${esc(x.ket)}</td><td>${esc(x.nota)||'-'}</td><td class="mono">${esc(x.no)}</td><td class="r mono">${x.d?num(x.d):'<span class="sub">-</span>'}</td><td class="r mono">${x.k?num(x.k):'<span class="sub">-</span>'}</td><td class="r mono"><b>${num(x.s)}</b></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Tidak ada transaksi.</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="4">Total (${e.length} transaksi)</td><td class="r mono">${num(td)}</td><td class="r mono">${num(tk)}</td><td class="r mono">${num(sal)}</td></tr></tfoot></table></div>`;
+}
+function exportKartu(){
+  const e=kartuRows(S.kn);
+  csv([['Supplier',S.kn],['Tanggal','Keterangan','Nota','Nomor E-Faktur','Tagihan','Pembayaran','Saldo']].concat(e.map(x=>[x.tgl,x.ket,x.nota,x.no,x.d,x.k,x.s])),'kartu-hutang-'+S.kn.replace(/[^\w]+/g,'-').slice(0,40)+'.csv');
 }
 
 /* ====================== DAFTAR SUPPLIER (MASTER) ====================== */
@@ -1224,15 +1265,24 @@ async function syncSup(){
 /* ====================== RIWAYAT PEMBAYARAN ====================== */
 function renderBayar(){
   $('pg').innerHTML=`
-  <div class="ph"><div><h1>Riwayat Pembayaran</h1><div class="sub">Semua pembayaran yang tercatat di sheet “Pembayaran”</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportBayar()">${ic('download')} Ekspor CSV</button>${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
-  <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier, nomor faktur, referensi..." value="${esc(S.pq)}" oninput="S.pq=this.value;drawBayar()"></div></div><div id="by"></div></div>`;
+  <div class="ph"><div><h1>Riwayat Pembayaran</h1><div class="sub" id="bySub">Semua pembayaran yang tercatat di sheet “Pembayaran”</div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportBayar()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()">${ic('download')} Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
+  <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier, nomor faktur, referensi..." value="${esc(S.pq)}" oninput="S.pq=this.value;drawBayar()"></div>
+   <div style="flex:0 0 160px"><div class="sub" style="margin-bottom:3px">Dari tanggal</div>${dateField('byF',dmy2iso(S.bf))}</div>
+   <div style="flex:0 0 160px"><div class="sub" style="margin-bottom:3px">Sampai tanggal</div>${dateField('byT',dmy2iso(S.bt))}</div>
+   <button class="btn ghost" onclick="S.bf='';S.bt='';S.pq='';renderBayar()">Reset</button></div><div id="by"></div></div>`;
+  [['byF','bf'],['byT','bt']].forEach(([id,k])=>{
+    const sync=()=>{S[k]=$(id).value;drawBayar()};
+    $(id).addEventListener('input',sync);$(id+'_p').addEventListener('change',()=>setTimeout(sync,0));
+  });
   drawBayar();
 }
-function bFiltered(){const q=S.pq.toLowerCase();return S.data.payments.filter(p=>!q||(p.supplier+' '+p.no+' '+p.ref+' '+p.ket+' '+p.id+' '+((S.map[p.no]||{}).nota||'')).toLowerCase().includes(q)).sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.id.localeCompare(a.id))}
+function bFiltered(){const q=S.pq.toLowerCase(),df=dmy2iso(S.bf),dt=dmy2iso(S.bt);return S.data.payments.filter(p=>(!df||p.tgl>=df)&&(!dt||p.tgl<=dt)&&(!q||(p.supplier+' '+p.no+' '+p.ref+' '+p.ket+' '+p.id+' '+((S.map[p.no]||{}).nota||'')).toLowerCase().includes(q))).sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.id.localeCompare(a.id))}
 function exportBayar(){csv([['ID','Tanggal','Nomor E-Faktur','Supplier','Jumlah','Metode','Referensi','Keterangan','Dibuat Oleh']].concat(bFiltered().map(p=>[p.id,p.tgl,p.no,p.supplier,p.jumlah,p.metode,p.ref,p.ket,p.oleh])),'riwayat-pembayaran.csv')}
 function drawBayar(){
   const a=bFiltered();
+  const sb=$('bySub'),df=dmy2iso(S.bf),dt=dmy2iso(S.bt);
+  if(sb)sb.textContent=(df||dt)?'Periode: '+(df?fd(df):'awal')+' s/d '+(dt?fd(dt):'sekarang')+(S.pq?' · Pencarian: "'+S.pq+'"':''):'Semua pembayaran yang tercatat di sheet “Pembayaran”'+(S.pq?' · Pencarian: "'+S.pq+'"':'');
   $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.pay()?'<th class="noprint"></th>':''}</tr></thead>
   <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.pay()?`<td class="noprint" style="white-space:nowrap">${/-S$/.test(p.id)?'':`<button class="btn sec sm" title="Ubah pembayaran" onclick="openEditPay('${esc(p.id)}')">${ic('edit')}</button> `}${can.admin()?`<button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button>`:''}</td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
   <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.pay()?2:1}"></td></tr></tfoot></table></div>`;
