@@ -316,6 +316,21 @@ tfoot td{background:#f8fafc;font-weight:700;position:sticky;bottom:0;border-top:
   #pg.dash .rank{gap:10px}
   #pg.dash th,#pg.dash td{padding:7px 8px;font-size:12px}
 }
+.modal.wide{width:780px}
+.pmbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pmbar>*{flex:1 1 160px;min-width:0}
+.pmlist{border:1px solid var(--bd);border-radius:12px;max-height:300px;overflow:auto;margin-bottom:10px}
+.pmr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #eef1f7}
+.pmr:last-child{border:0}
+.pmr .pmc{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.pmr .pmc input{width:17px;height:17px;flex:none;accent-color:var(--brand)}
+.pmr .pmi{min-width:0;font-size:13px}
+.pmr .pmi .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pmr .pms{width:96px;text-align:right;font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;flex:none}
+.pmr .pma{width:130px;flex:none;padding:7px 9px;text-align:right}
+.pmsum{background:var(--brand-l);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;color:#312e81}
+@media(max-width:700px){.pmr{flex-wrap:wrap}.pmr .pms{width:auto;margin-left:27px;text-align:left}.pmr .pma{width:100%;flex:1 1 100%}}
+@media print{.modal{display:none!important}}
 @media print{
   @page{size: A4; margin: 15mm;}
   body{background:#fff; color:#0f172a; text-align:justify; font-size:12pt; line-height:1.5;}
@@ -670,7 +685,7 @@ window.addEventListener('hashchange',route);
 function killCharts(){S.charts.forEach(c=>c.destroy());S.charts=[]}
 function toggleSide(){$('side').classList.toggle('on');$('scrim').classList.toggle('on',$('side').classList.contains('on'))}
 function closeSide(){$('side').classList.remove('on');if(!$('drawer').classList.contains('on')&&!$('modal').classList.contains('on'))$('scrim').classList.remove('on')}
-function closeAll(){$('side').classList.remove('on');$('drawer').classList.remove('on');$('modal').classList.remove('on');$('scrim').classList.remove('on')}
+function closeAll(){$('side').classList.remove('on');$('drawer').classList.remove('on');$('modal').classList.remove('on');$('modal').classList.remove('wide');$('scrim').classList.remove('on')}
 
 /* ====================== HELPERS DATA ====================== */
 function bucket(f){if(f.sisa<1)return -1;if(f.umur<=0)return 0;if(f.umur<=30)return 1;if(f.umur<=60)return 2;if(f.umur<=90)return 3;return 4}
@@ -833,7 +848,7 @@ function renderFaktur(){
   const F=S.f;
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Daftar Hutang</h1><div class="sub">Faktur pajak masukan dari sheet “Faktur”</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportFaktur()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openFaktur()">${ic('plus')} Input Hutang Manual</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportFaktur()">${ic('download')} Ekspor CSV</button><button class="btn sec" onclick="downloadPDF()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh PDF</button><button class="btn sec" onclick="window.print()">${ic('printer')} Cetak</button>${can.pay()?`<button class="btn sec" onclick="openFaktur()">${ic('plus')} Input Hutang Manual</button>`:''}${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
   ${metaBanner()}
   <div class="panel">
    <div class="tools">
@@ -950,7 +965,7 @@ function openPay(no){
   S._payNo='';S._autoKet='';
   if(f)pickPay(f.no);
 }
-function closeModal(){$('modal').classList.remove('on');if(!$('drawer').classList.contains('on'))$('scrim').classList.remove('on')}
+function closeModal(){$('modal').classList.remove('on');$('modal').classList.remove('wide');if(!$('drawer').classList.contains('on'))$('scrim').classList.remove('on')}
 function fmtMoney(el){const d=el.value.replace(/\D/g,'');el.value=d?(+d).toLocaleString('id-ID'):''}
 function getMoney(){return parseInt(($('pJml').value||'').replace(/\D/g,''),10)||0}
 function maxSelisih(){const v=S.data&&S.data.settings&&S.data.settings.max_selisih;return typeof v==='number'?v:10000}
@@ -1210,7 +1225,7 @@ async function syncSup(){
 function renderBayar(){
   $('pg').innerHTML=`
   <div class="ph"><div><h1>Riwayat Pembayaran</h1><div class="sub">Semua pembayaran yang tercatat di sheet “Pembayaran”</div></div>
-   <div class="acts noprint"><button class="btn sec" onclick="exportBayar()">${ic('download')} Ekspor CSV</button>${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
+   <div class="acts noprint"><button class="btn sec" onclick="exportBayar()">${ic('download')} Ekspor CSV</button>${can.pay()?`<button class="btn sec" onclick="openPayMulti()">${ic('layers')} Bayar Banyak Tagihan</button>`:''}${can.pay()?`<button class="btn acc" onclick="openPay()">${ic('plus')} Catat Pembayaran</button>`:''}</div></div>
   <div class="panel"><div class="tools"><div class="sbox">${ic('search')}<input class="inp" placeholder="Cari supplier, nomor faktur, referensi..." value="${esc(S.pq)}" oninput="S.pq=this.value;drawBayar()"></div></div><div id="by"></div></div>`;
   drawBayar();
 }
@@ -1222,6 +1237,101 @@ function drawBayar(){
   <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.pay()?`<td class="noprint" style="white-space:nowrap">${/-S$/.test(p.id)?'':`<button class="btn sec sm" title="Ubah pembayaran" onclick="openEditPay('${esc(p.id)}')">${ic('edit')}</button> `}${can.admin()?`<button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button>`:''}</td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
   <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.pay()?2:1}"></td></tr></tfoot></table></div>`;
 }
+/* ====================== PEMBAYARAN MULTI TAGIHAN ====================== */
+function openPayMulti(){
+  if(!can.pay())return toast('Anda tidak memiliki hak mencatat pembayaran','err');
+  S._pm={sel:{}};
+  const sups=[...new Set(S.data.faktur.filter(f=>f.sisa>=1).map(f=>f.supplier))].sort((a,b)=>a.localeCompare(b));
+  if(!sups.length)return toast('Tidak ada tagihan yang belum lunas','err');
+  $('modal').classList.add('wide');
+  $('modal').innerHTML=`
+  <div class="mh"><h3>Bayar Banyak Tagihan</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
+  <div class="mb">
+   <div class="pmbar">
+    <select class="inp" id="pmSup" onchange="drawPMList()"><option value="">Semua Supplier</option>${sups.map(n=>`<option>${esc(n)}</option>`).join('')}</select>
+    <input class="inp" id="pmQ" placeholder="Cari nota / e-faktur..." oninput="drawPMList()" autocomplete="off">
+   </div>
+   <div class="pmlist" id="pmList"></div>
+   <div class="fg"><label>Total Transfer (opsional, untuk pembagian otomatis)</label>
+    <div style="display:flex;gap:8px"><input class="inp" id="pmTot" inputmode="numeric" placeholder="0" oninput="fmtMoney(this)"><button type="button" class="btn sec" onclick="pmAlloc()">Bagi Otomatis</button></div>
+    <div class="hint">Total dibagikan ke tagihan terpilih (atau tagihan yang tampil bila belum ada yang dipilih), mulai dari jatuh tempo paling awal.</div></div>
+   <div class="pmsum" id="pmSum">Belum ada tagihan dipilih</div>
+   <label class="chk"><input type="checkbox" id="pmLunas"><span>Lunasi selisih (kurang/lebih maksimal ${rp(maxSelisih())} per tagihan), dicatat sebagai penyesuaian</span></label>
+   <div class="row2">
+    <div class="fg"><label>Tanggal Bayar</label>${dateField('pmTgl',S.data.meta.today)}</div>
+    <div class="fg"><label>Metode</label><select class="inp" id="pmMet"><option>Transfer</option><option>Tunai</option><option>Giro</option><option>Cek</option><option>Lainnya</option></select></div>
+   </div>
+   <div class="fg"><label>No. Referensi / Bukti Transfer</label><input class="inp" id="pmRef"></div>
+   <div class="fg" style="margin-bottom:0"><label>Keterangan (kosong = otomatis per nota)</label><input class="inp" id="pmKet"></div>
+  </div>
+  <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="pmBtn" onclick="submitPayMulti()">${ic('check')} Simpan Pembayaran</button></div>`;
+  hydrateIcons($('modal'));$('modal').classList.add('on');$('scrim').classList.add('on');
+  drawPMList();pmSum();
+}
+function pmOptions(){
+  const sup=$('pmSup').value,q=$('pmQ').value.toLowerCase().trim();
+  return S.data.faktur.filter(f=>f.sisa>=1&&(!sup||f.supplier===sup)&&(!q||(f.nota+' '+f.no+' '+f.supplier).toLowerCase().includes(q)))
+    .sort((a,b)=>(a.jt||'').localeCompare(b.jt||'')||(a.nota||'').localeCompare(b.nota||'',undefined,{numeric:true}));
+}
+function drawPMList(){
+  const a=pmOptions(),sel=S._pm.sel,l=$('pmList');
+  l.innerHTML=a.length?a.slice(0,200).map(f=>{
+    const on=f.no in sel;
+    return `<div class="pmr" data-no="${esc(f.no)}"><label class="pmc"><input type="checkbox" ${on?'checked':''} onchange="pmToggle(this)"><div class="pmi"><b>${esc(f.nota)||'(tanpa nota)'}</b> ${f.umur>0?'<span class="badge b-red">Lewat '+f.umur+' hr</span>':''}<div class="sub">${esc(f.supplier)} · JT ${fd(f.jt)}</div></div></label><div class="pms">${num(f.sisa)}</div><input class="inp pma" inputmode="numeric" placeholder="Jumlah bayar" ${on?'':'disabled'} value="${on?Math.round(sel[f.no]).toLocaleString('id-ID'):''}" oninput="pmAmt(this)"></div>`;
+  }).join(''):'<div class="empty" style="padding:24px">Tidak ada tagihan belum lunas yang cocok</div>';
+}
+function pmToggle(el){
+  const r=el.closest('.pmr'),no=r.dataset.no,f=S.map[no],inp=r.querySelector('.pma');
+  if(el.checked){S._pm.sel[no]=Math.round(f.sisa);inp.disabled=false;inp.value=Math.round(f.sisa).toLocaleString('id-ID')}
+  else{delete S._pm.sel[no];inp.disabled=true;inp.value=''}
+  pmSum();
+}
+function pmAmt(el){
+  fmtMoney(el);
+  const no=el.closest('.pmr').dataset.no;
+  S._pm.sel[no]=parseInt(el.value.replace(/\D/g,''),10)||0;
+  pmSum();
+}
+function pmSum(){
+  const sel=S._pm.sel,nos=Object.keys(sel),box=$('pmSum');if(!box)return;
+  let tot=0,ts=0,over=0,under=0;
+  nos.forEach(no=>{const f=S.map[no],a=sel[no]||0;tot+=a;ts+=f.sisa;const d=Math.round((f.sisa-a)*100)/100;if(d<=-1)over++;else if(d>=1)under++});
+  box.innerHTML=nos.length?`<b>${nos.length}</b> tagihan dipilih · Total sisa ${rp0(ts)} · <b>Total dibayar ${rp0(tot)}</b>${over?`<br>${over} tagihan kelebihan bayar: kelebihan dicatat sebagai selisih.`:''}${under?`<br>${under} tagihan dibayar sebagian: sisanya tetap menjadi hutang${'' }, kecuali selisih ≤ ${rp0(maxSelisih())} dan opsi lunasi dicentang.`:''}`:'Belum ada tagihan dipilih';
+  if(over)$('pmLunas').checked=true;
+}
+function pmAlloc(){
+  const total=parseInt(($('pmTot').value||'').replace(/\D/g,''),10)||0;
+  if(total<=0)return toast('Isi total transfer terlebih dahulu','err');
+  const E=S._pm,chosen=Object.keys(E.sel).map(n=>S.map[n]);
+  const list=(chosen.length?chosen:pmOptions()).slice().sort((a,b)=>(a.jt||'').localeCompare(b.jt||''));
+  let rest=total;E.sel={};
+  list.forEach(f=>{if(rest<=0)return;const a=Math.min(Math.round(f.sisa),rest);if(a>0){E.sel[f.no]=a;rest-=a}});
+  drawPMList();pmSum();
+  if(rest>0)toast('Total transfer lebih besar dari tagihan yang tersedia, sisa '+rp0(rest)+' belum teralokasi','err');
+}
+async function submitPayMulti(){
+  const E=S._pm,nos=Object.keys(E.sel);
+  if(!nos.length)return toast('Pilih minimal satu tagihan','err');
+  const tg=dmy2iso($('pmTgl').value);if(!tg)return toast('Tanggal bayar harus berformat dd-mm-yyyy','err');
+  const lunasi=$('pmLunas').checked,items=[];
+  for(const no of nos){
+    const f=S.map[no],a=E.sel[no]||0,lb=f.nota||f.no;
+    if(a<=0)return toast('Jumlah bayar nota '+lb+' wajib diisi','err');
+    const d=Math.round((f.sisa-a)*100)/100;
+    if(d<=-1&&!lunasi)return toast('Jumlah nota '+lb+' melebihi sisa. Centang opsi lunasi selisih','err');
+    if(d<=-1&&-d>maxSelisih())return toast('Kelebihan nota '+lb+' melebihi batas penyesuaian '+rp(maxSelisih()),'err');
+    items.push({no:no,jumlah:a,jt:f.jt});
+  }
+  items.sort((x,y)=>(x.jt||'').localeCompare(y.jt||''));
+  const total=items.reduce((s,x)=>s+x.jumlah,0);
+  const b=$('pmBtn');b.disabled=true;
+  try{
+    await api('addPaymentMulti',{items:items.map(x=>({no:x.no,jumlah:x.jumlah})),tgl:tg,lunasi:lunasi,metode:$('pmMet').value,ref:$('pmRef').value,ket:$('pmKet').value});
+    toast(items.length+' tagihan berhasil dibayar, total '+rp(total));
+    closeModal();await reload(true);
+  }catch(e){toast(e.message,'err');b.disabled=false}
+}
+
 /* ====================== UBAH PEMBAYARAN ====================== */
 function openEditPay(id){
   if(!can.pay())return toast('Anda tidak memiliki hak mengubah pembayaran','err');
