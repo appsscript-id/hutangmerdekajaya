@@ -1218,10 +1218,75 @@ function bFiltered(){const q=S.pq.toLowerCase();return S.data.payments.filter(p=
 function exportBayar(){csv([['ID','Tanggal','Nomor E-Faktur','Supplier','Jumlah','Metode','Referensi','Keterangan','Dibuat Oleh']].concat(bFiltered().map(p=>[p.id,p.tgl,p.no,p.supplier,p.jumlah,p.metode,p.ref,p.ket,p.oleh])),'riwayat-pembayaran.csv')}
 function drawBayar(){
   const a=bFiltered();
-  $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.admin()?'<th></th>':''}</tr></thead>
-  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.admin()?`<td><button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button></td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.admin()?2:1}"></td></tr></tfoot></table></div>`;
+  $('by').innerHTML=`<div class="tw"><table><thead><tr><th>Tanggal</th><th>ID</th><th>Nota</th><th>Nomor E-Faktur</th><th>Supplier</th><th>Metode</th><th>Referensi</th><th>Keterangan</th><th class="r">Jumlah</th><th>Oleh</th>${can.pay()?'<th class="noprint"></th>':''}</tr></thead>
+  <tbody>${a.length?a.map(p=>`<tr><td>${fd(p.tgl)}</td><td class="sub">${esc(p.id)}</td><td><b>${esc((S.map[p.no]||{}).nota)||'-'}</b></td><td class="mono"><a style="color:var(--brand);cursor:pointer" onclick="openDetail('${esc(p.no)}')">${esc(p.no)}</a></td><td>${esc(p.supplier)}</td><td>${esc(p.metode)}${p.metode==='Selisih'?' <span class="badge b-gray">Penyesuaian</span>':''}</td><td>${esc(p.ref)||'-'}</td><td>${esc(p.ket)||'-'}</td><td class="r mono"><b>${num(p.jumlah)}</b></td><td>${esc(p.oleh)}</td>${can.pay()?`<td class="noprint" style="white-space:nowrap">${/-S$/.test(p.id)?'':`<button class="btn sec sm" title="Ubah pembayaran" onclick="openEditPay('${esc(p.id)}')">${ic('edit')}</button> `}${can.admin()?`<button class="btn danger sm" onclick="delPay('${esc(p.id)}')">${ic('trash')}</button>`:''}</td>`:''}</tr>`).join(''):`<tr><td colspan="11" class="empty">Belum ada pembayaran tercatat.</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="8">Total (${a.length} transaksi)</td><td class="r mono">${num(sum(a,'jumlah'))}</td><td colspan="${can.pay()?2:1}"></td></tr></tfoot></table></div>`;
 }
+/* ====================== UBAH PEMBAYARAN ====================== */
+function openEditPay(id){
+  if(!can.pay())return toast('Anda tidak memiliki hak mengubah pembayaran','err');
+  const base=id.replace(/-S$/,'');
+  const p=S.data.payments.find(x=>x.id===base),f=p&&S.map[p.no];
+  if(!p||!f)return toast('Data pembayaran tidak ditemukan','err');
+  const sl=S.data.payments.find(x=>x.id===base+'-S');
+  const paidOther=Math.round((f.dibayar-p.jumlah-(sl?sl.jumlah:0))*100)/100;
+  S._ep={id:base,sisa:Math.round((f.total-paidOther)*100)/100,hadSel:!!sl};
+  const mets=['Transfer','Tunai','Giro','Cek','Lainnya'];if(p.metode&&!mets.includes(p.metode))mets.push(p.metode);
+  $('modal').innerHTML=`
+  <div class="mh"><h3>Ubah Pembayaran</h3><button class="x" onclick="closeModal()">${ic('x')}</button></div>
+  <div class="mb">
+   <div class="infobox" style="margin-top:0;margin-bottom:14px"><b>Nota: ${esc(f.nota)||'-'}</b> · ${esc(f.supplier)}<br>E-Faktur ${esc(f.no)} · ID ${esc(p.id)}<br>Total ${rp(f.total)} · Sisa sebelum pembayaran ini <b>${rp(S._ep.sisa)}</b></div>
+   <div class="row2">
+    <div class="fg"><label>Tanggal Bayar</label>${dateField('eTgl',p.tgl)}</div>
+    <div class="fg"><label>Metode</label><select class="inp" id="eMet">${mets.map(m=>`<option ${m===p.metode?'selected':''}>${esc(m)}</option>`).join('')}</select></div>
+   </div>
+   <div class="fg" style="margin-bottom:0"><label>Jumlah Dibayar (Rp)</label>
+    <input class="inp" id="eJml" inputmode="numeric" placeholder="0" value="${Math.round(p.jumlah).toLocaleString('id-ID')}" oninput="fmtMoney(this);editSelInfo()">
+    <div class="infobox hidden" id="eSel"></div>
+    <label class="chk hidden" id="eLunasW"><input type="checkbox" id="eLunas"><span id="eLunasTx">Lunasi faktur ini, selisih dicatat sebagai penyesuaian</span></label></div>
+   <div class="fg" style="margin-top:16px"><label>No. Referensi / Bukti Transfer</label><input class="inp" id="eRef" value="${esc(p.ref)}"></div>
+   <div class="fg" style="margin-bottom:0"><label>Keterangan</label><input class="inp" id="eKet" value="${esc(p.ket)}"></div>
+  </div>
+  <div class="mf"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn ok" id="eBtn" onclick="submitEditPay()">${ic('check')} Simpan Perubahan</button></div>`;
+  hydrateIcons($('modal'));$('modal').classList.add('on');$('scrim').classList.add('on');
+  editSelInfo(true);
+}
+function editJml(){return parseInt(($('eJml').value||'').replace(/\D/g,''),10)||0}
+function editSelInfo(init){
+  const E=S._ep,b=$('eSel'),w=$('eLunasW');if(!E||!b||!w)return;
+  const jml=editJml(),sel=Math.round((E.sisa-jml)*100)/100;
+  if(jml>0&&Math.abs(sel)>=1){
+    const kurang=sel>0,abs=Math.abs(sel),ok=abs<=maxSelisih();
+    b.classList.remove('hidden');
+    b.innerHTML=(kurang?'Kurang bayar ':'Kelebihan bayar ')+'<b>'+rp(abs)+'</b>. '+(ok
+      ?(kurang?'Centang opsi di bawah untuk melunasi faktur ini, atau biarkan kosong agar sisanya tetap menjadi hutang.':'Kelebihan akan dicatat sebagai selisih (penyesuaian) dan faktur dilunasi.')
+      :'Melebihi batas penyesuaian ('+rp(maxSelisih())+')'+(kurang?', sisa tetap menjadi hutang.':'. Kurangi jumlah pembayaran.'));
+    $('eLunasTx').textContent=kurang?'Lunasi faktur ini, selisih dicatat sebagai penyesuaian':'Catat kelebihan sebagai selisih (penyesuaian)';
+    w.classList.toggle('hidden',!ok);
+    if(!ok)$('eLunas').checked=false;
+    else if(!kurang)$('eLunas').checked=true;
+    else if(init&&E.hadSel)$('eLunas').checked=true;
+  }else{
+    b.classList.add('hidden');w.classList.add('hidden');$('eLunas').checked=false;
+  }
+}
+async function submitEditPay(){
+  const E=S._ep;if(!E)return;
+  const tg=dmy2iso($('eTgl').value),jml=editJml();
+  if(!tg)return toast('Tanggal bayar harus berformat dd-mm-yyyy','err');
+  if(jml<=0)return toast('Jumlah pembayaran wajib diisi','err');
+  const sel=Math.round((E.sisa-jml)*100)/100;
+  if(sel<=-1&&-sel>maxSelisih())return toast('Kelebihan di atas batas penyesuaian '+rp(maxSelisih()),'err');
+  if(sel<=-1&&!$('eLunas').checked)return toast('Jumlah melebihi sisa hutang. Centang opsi untuk mencatat kelebihan sebagai selisih','err');
+  const lunasi=$('eLunas').checked&&Math.abs(sel)>=1&&Math.abs(sel)<=maxSelisih();
+  const b=$('eBtn');b.disabled=true;
+  try{
+    await api('updatePayment',{id:E.id,tgl:tg,jumlah:jml,lunasi:lunasi,metode:$('eMet').value,ref:$('eRef').value,ket:$('eKet').value});
+    toast('Pembayaran berhasil diubah');
+    closeModal();await reload(true);
+  }catch(e){toast(e.message,'err');b.disabled=false}
+}
+
 async function delPay(id){
   if(!confirm('Hapus pembayaran ini? Sisa hutang faktur akan bertambah kembali. Jika pembayaran ini punya baris selisih, baris itu ikut dihapus.'))return;
   busy(true);
