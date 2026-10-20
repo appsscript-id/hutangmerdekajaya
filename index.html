@@ -562,8 +562,56 @@ async function api(action,payload){
   if(!j.ok) throw new Error(j.error||'Terjadi kesalahan');
   return j;
 }
-function saveSession(){try{localStorage.setItem('hp_sess',JSON.stringify({t:S.token,u:S.user}))}catch(e){}}
-function clearSession(){S.token=null;S.user=null;try{localStorage.removeItem('hp_sess')}catch(e){}}
+function saveSession(){try{sessionStorage.setItem('hp_sess',JSON.stringify({t:S.token,u:S.user}))}catch(e){}}
+function clearSession(){S.token=null;S.user=null;try{sessionStorage.removeItem('hp_sess');localStorage.removeItem('hp_sess')}catch(e){}}
+
+/* ====================== MUSIK RELAKSASI (±8 detik, dibuat dengan Web Audio, tanpa file) ====================== */
+let _ac=null;
+function prepMusic(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    if(!_ac)_ac=new AC();
+    if(_ac.state==='suspended')_ac.resume();
+  }catch(e){}
+}
+function playWelcome(){
+  try{
+    prepMusic();const ac=_ac;if(!ac)return;
+    const t0=ac.currentTime+0.05,DUR=8;
+    const master=ac.createGain();
+    master.gain.setValueAtTime(0.0001,t0);
+    master.gain.exponentialRampToValueAtTime(0.5,t0+1.5);   // masuk perlahan
+    master.gain.setValueAtTime(0.5,t0+DUR-2.5);
+    master.gain.exponentialRampToValueAtTime(0.0001,t0+DUR); // menghilang lembut
+    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;
+    master.connect(lp);lp.connect(ac.destination);
+    // gema lembut
+    const dl=ac.createDelay(1);dl.delayTime.value=0.38;
+    const fb=ac.createGain();fb.gain.value=0.35;
+    const wet=ac.createGain();wet.gain.value=0.4;
+    lp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(ac.destination);
+    // pad akor Cmaj9 (C3 G3 E4 B4) yang hangat
+    [130.81,196.00,329.63,493.88].forEach((f,i)=>{
+      [-4,4].forEach(det=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.type='sine';o.frequency.value=f;o.detune.value=det;
+        g.gain.value=0.11/(1+i*0.25);
+        o.connect(g);g.connect(master);o.start(t0);o.stop(t0+DUR+0.1);
+      });
+    });
+    // melodi pentatonik pelan seperti dentingan lonceng
+    const mel=[523.25,659.25,783.99,659.25,880.00,783.99,659.25,523.25];
+    mel.forEach((f,i)=>{
+      const t=t0+1.2+i*0.85;if(t>t0+DUR-0.6)return;
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='triangle';o.frequency.value=f;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.09,t+0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
+      o.connect(g);g.connect(master);o.start(t);o.stop(t+1.7);
+    });
+  }catch(e){}
+}
 
 /* ====================== LOGIN ====================== */
 function showLogin(msg){
@@ -571,10 +619,11 @@ function showLogin(msg){
   const e=$('lgErr');if(msg){e.textContent=msg;e.classList.remove('hidden')}else e.classList.add('hidden');
 }
 async function doLogin(ev){
-  ev.preventDefault();const b=$('lgB');b.disabled=true;b.textContent='Memeriksa...';
+  ev.preventDefault();prepMusic();const b=$('lgB');b.disabled=true;b.textContent='Memeriksa...';
   try{
     const j=await api('login',{username:$('lgU').value,password:$('lgP').value});
     S.token=j.token;S.user=j.user;saveSession();$('lgP').value='';
+    playWelcome();
     await boot();
   }catch(e){const x=$('lgErr');x.textContent=e.message;x.classList.remove('hidden')}
   b.disabled=false;b.textContent='Masuk';
@@ -1245,7 +1294,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
 (async function init(){
   $('yr').textContent=new Date().getFullYear();
   hydrateIcons();
-  let s=null;try{s=JSON.parse(localStorage.getItem('hp_sess')||'null')}catch(e){}
+  try{localStorage.removeItem('hp_sess')}catch(e){} /* hapus sesi lama versi sebelumnya */
+  let s=null;try{s=JSON.parse(sessionStorage.getItem('hp_sess')||'null')}catch(e){}
   try{if(s&&s.t&&s.u){S.token=s.t;S.user=s.u;await boot()}else showLogin()}catch(e){clearSession();showLogin()}
 })();
 </script>
